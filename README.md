@@ -84,7 +84,7 @@ omnibots/
 2. Navigate to **Websites** > **Add Website** or manage your existing domain.
 3. Choose **Node.js Web App**.
 4. In the Git Deployment section:
-   - Repository: `https://github.com/PantherYTac/discord-bot-dashboard`
+   - Repository: `https://github.com/PantherYTac/OmniBots`
    - Branch: `main`
 
 ### Step 2: Configure Application Settings
@@ -114,8 +114,8 @@ omnibots/
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/PantherYTac/discord-bot-dashboard.git
-cd discord-bot-dashboard
+git clone https://github.com/PantherYTac/OmniBots.git
+cd OmniBots
 
 # 2. Install dependencies
 npm install
