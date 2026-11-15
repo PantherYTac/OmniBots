@@ -1,0 +1,514 @@
+<%- include('partials/head', { title: `${guild.name} • Invite Tracker` }) %>
+<%- include('partials/navbar') %>
+
+<div class="flex-1 flex">
+  <%- include('partials/sidebar', { tab: 'invites', guild }) %>
+
+  <main class="flex-1 p-6 sm:p-10 space-y-8 overflow-y-auto max-w-6xl">
+    <!-- Header Banner -->
+    <div class="border-b border-[#1E2538] pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+          <i data-lucide="user-plus" class="w-8 h-8 text-blurple"></i>
+          <span>Invite Tracker & Attribution</span>
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Track member referrals, detect vanity joins, filter fake/alt accounts, and award automatic role rewards.</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button type="button" id="wipe-all-invites-btn" class="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 text-xs font-semibold flex items-center gap-2 transition">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <span>Wipe All Server Invites</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. Engine Configuration Card -->
+    <form id="invite-settings-form" class="glass-card p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#1E2538] pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-5 h-5 text-blurple"></i>
+            <span>Engine Preferences & Anti-Fake Filter</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Customize detection thresholds and departure penalty rules.</p>
+        </div>
+
+        <button type="submit" id="save-settings-btn" class="px-5 py-2.5 rounded-xl bg-blurple hover:bg-blurple-hover text-white text-xs font-bold shadow-md shadow-blurple/20 flex items-center gap-2 transition">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>Save Settings</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Module Toggle -->
+        <div class="p-4 rounded-xl bg-[#0B0E14] border border-[#1E2538] flex items-center justify-between">
+          <div>
+            <div class="text-sm font-bold text-white">Enable Tracking</div>
+            <div class="text-xs text-slate-400 mt-0.5">Attribute joins & vanity links</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="enabled" class="sr-only peer" <%= (settings.inviteTracking?.enabled !== false && settings.modules?.inviteTracker !== false) ? 'checked' : '' %>>
+            <div class="w-11 h-6 bg-[#131823] border border-[#1E2538] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blurple"></div>
+          </label>
+        </div>
+
+        <!-- Subtract Leaves Toggle -->
+        <div class="p-4 rounded-xl bg-[#0B0E14] border border-[#1E2538] flex items-center justify-between">
+          <div>
+            <div class="text-sm font-bold text-white">Subtract Departures</div>
+            <div class="text-xs text-slate-400 mt-0.5">Deduct leaves from net total</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="subtractLeaves" class="sr-only peer" <%= settings.inviteTracking?.subtractLeaves !== false ? 'checked' : '' %>>
+            <div class="w-11 h-6 bg-[#131823] border border-[#1E2538] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blurple"></div>
+          </label>
+        </div>
+
+        <!-- Anti-Fake Minimum Account Age -->
+        <div class="p-4 rounded-xl bg-[#0B0E14] border border-[#1E2538] space-y-2">
+          <div class="flex items-center justify-between text-xs font-semibold">
+            <span class="text-white">Anti-Fake Age:</span>
+            <span id="age-display" class="text-blurple font-mono font-bold"><%= settings.inviteTracking?.minAccountAgeDays ?? 7 %> days</span>
+          </div>
+          <input type="range" id="age-slider" name="minAccountAgeDays" min="0" max="30" step="1" value="<%= settings.inviteTracking?.minAccountAgeDays ?? 7 %>" class="w-full h-2 bg-[#131823] rounded-lg appearance-none cursor-pointer accent-blurple">
+          <div class="text-[10px] text-slate-500">Flags accounts younger than this as Fake.</div>
+        </div>
+      </div>
+    </form>
+
+    <!-- 2. Invite Role Rewards Milestone Builder -->
+    <div class="glass-card p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#1E2538] pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="award" class="w-5 h-5 text-blurple"></i>
+            <span>Invite Role Rewards</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Automatically grant special Discord roles when inviters hit net invite milestones.</p>
+        </div>
+      </div>
+
+      <!-- Add Milestone Form -->
+      <form id="add-reward-form" class="p-4 rounded-xl bg-[#0B0E14] border border-[#1E2538] grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Net Invites Required</label>
+          <input type="number" id="reward-threshold" min="1" max="1000" placeholder="e.g. 5" required class="w-full bg-[#131823] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-xs">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Reward Role</label>
+          <select id="reward-role-id" required class="w-full bg-[#131823] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-xs">
+            <option value="">Select a Discord role...</option>
+            <% (roles || []).forEach(r => { %>
+              <option value="<%= r.id %>">@<%= r.name %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div>
+          <button type="submit" id="add-reward-btn" class="w-full px-4 py-2.5 rounded-xl bg-blurple hover:bg-blurple-hover text-white text-xs font-bold flex items-center justify-center gap-2 transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Add Role Milestone</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Active Milestones List -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Current Milestone Tiers</h3>
+        <% 
+          const rewards = (settings.inviteTracking && settings.inviteTracking.rewards) ? settings.inviteTracking.rewards : [];
+        %>
+        <% if (rewards.length === 0) { %>
+          <div class="p-6 text-center text-xs text-slate-500 bg-[#0B0E14] rounded-xl border border-[#1E2538]">
+            No invite milestone rewards configured yet. Add your first reward above!
+          </div>
+        <% } else { %>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <% rewards.forEach(rw => { 
+                const roleObj = (roles || []).find(r => r.id === rw.roleId);
+            %>
+              <div class="p-3.5 rounded-xl bg-[#0B0E14] border border-[#1E2538] flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span class="w-7 h-7 rounded-lg bg-blurple/20 text-blurple font-bold text-xs flex items-center justify-center font-mono">
+                    <%= rw.threshold %>+
+                  </span>
+                  <div>
+                    <div class="text-xs font-bold text-white">
+                      <%= roleObj ? `@${roleObj.name}` : `Role ID: ${rw.roleId}` %>
+                    </div>
+                    <div class="text-[10px] text-slate-400"><%= rw.threshold %> Net Invites</div>
+                  </div>
+                </div>
+
+                <button type="button" class="delete-reward-btn text-slate-500 hover:text-red-400 p-1.5 rounded transition" data-threshold="<%= rw.threshold %>" title="Remove Milestone">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- 3. Top Inviters Table (Carl-bot / BotGhost style) -->
+    <div class="glass-card p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#1E2538] pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="trophy" class="w-5 h-5 text-yellow-400"></i>
+            <span>Top Server Inviters Leaderboard</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Live ranking of all recruiters with quick bonus adjustments and manual reset tools.</p>
+        </div>
+
+        <div class="w-full sm:w-64">
+          <div class="relative">
+            <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-3"></i>
+            <input type="text" id="inviters-search" placeholder="Filter by User ID..." class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl pl-9 pr-4 py-2 text-white text-xs focus:outline-none focus:border-blurple">
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div class="overflow-x-auto rounded-xl border border-[#1E2538]">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-[#0B0E14] text-slate-400 border-b border-[#1E2538] uppercase font-semibold text-[11px]">
+              <th class="py-3 px-4">Rank</th>
+              <th class="py-3 px-4">User</th>
+              <th class="py-3 px-4 text-center text-emerald-400">Regular</th>
+              <th class="py-3 px-4 text-center text-blue-400">Bonus</th>
+              <th class="py-3 px-4 text-center text-red-400">Leaves</th>
+              <th class="py-3 px-4 text-center text-amber-400">Fake</th>
+              <th class="py-3 px-4 text-center text-white font-bold">Net Total</th>
+              <th class="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inviters-tbody" class="divide-y divide-[#1E2538]">
+            <% if (!inviters || inviters.length === 0) { %>
+              <tr>
+                <td colspan="8" class="text-center py-8 text-slate-500 text-xs">
+                  No invite records found yet in this server. Members who invite others will automatically appear here!
+                </td>
+              </tr>
+            <% } else { %>
+              <% inviters.forEach((inv, idx) => { %>
+                <tr class="inviter-row hover:bg-[#1E2538]/40 transition" data-userid="<%= inv.userId %>">
+                  <td class="py-3 px-4 font-mono font-bold">
+                    <% if (idx === 0) { %>
+                      <span class="text-yellow-400">🥇 #1</span>
+                    <% } else if (idx === 1) { %>
+                      <span class="text-slate-300">🥈 #2</span>
+                    <% } else if (idx === 2) { %>
+                      <span class="text-amber-600">🥉 #3</span>
+                    <% } else { %>
+                      <span class="text-slate-500">#<%= idx + 1 %></span>
+                    <% } %>
+                  </td>
+
+                  <td class="py-3 px-4 font-medium text-white flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-blurple/20 text-blurple flex items-center justify-center font-bold text-[10px]">
+                      <%= inv.userId.slice(-2) %>
+                    </span>
+                    <span class="font-mono text-slate-300"><%= inv.userId %></span>
+                  </td>
+
+                  <td class="py-3 px-4 text-center font-mono font-bold text-emerald-400">
+                    <%= inv.regular %>
+                  </td>
+
+                  <td class="py-3 px-4 text-center font-mono font-bold text-blue-400">
+                    <%= inv.bonus > 0 ? `+${inv.bonus}` : inv.bonus %>
+                  </td>
+
+                  <td class="py-3 px-4 text-center font-mono text-red-400">
+                    -<%= inv.leaves %>
+                  </td>
+
+                  <td class="py-3 px-4 text-center font-mono text-amber-400">
+                    <%= inv.fake %>
+                  </td>
+
+                  <td class="py-3 px-4 text-center font-mono font-bold text-sm text-white bg-blurple/10">
+                    <%= inv.net %>
+                  </td>
+
+                  <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+                    <button type="button" class="edit-bonus-btn px-2.5 py-1 rounded bg-[#1E2538] hover:bg-blurple text-slate-300 hover:text-white font-medium text-[11px] transition" data-userid="<%= inv.userId %>" data-bonus="<%= inv.bonus %>">
+                      ± Bonus
+                    </button>
+                    <button type="button" class="reset-user-btn px-2.5 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-medium text-[11px] transition" data-userid="<%= inv.userId %>">
+                      Reset
+                    </button>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Edit Bonus Invites -->
+<div id="bonus-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="glass-card max-w-md w-full p-6 space-y-4 shadow-2xl border border-[#1E2538]">
+    <div class="flex items-center justify-between border-b border-[#1E2538] pb-3">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2">
+        <i data-lucide="gift" class="w-4 h-4 text-blurple"></i>
+        <span>Adjust Bonus Invites</span>
+      </h3>
+      <button type="button" id="close-bonus-modal" class="text-slate-500 hover:text-white">✕</button>
+    </div>
+
+    <form id="bonus-modal-form" class="space-y-4">
+      <input type="hidden" id="modal-user-id">
+      
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Target User ID</label>
+        <div id="modal-user-display" class="font-mono text-xs text-blurple bg-[#0B0E14] p-2.5 rounded-lg border border-[#1E2538]"></div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Add / Deduct Amount</label>
+        <input type="number" id="modal-amount" placeholder="e.g. 5 or -2" required class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-xs">
+        <p class="text-[10px] text-slate-500 mt-1">Use a positive integer to grant bonus invites or negative to deduct.</p>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" id="cancel-bonus-btn" class="px-4 py-2 rounded-xl bg-[#1E2538] hover:bg-[#2A344D] text-slate-300 text-xs font-semibold transition">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-blurple hover:bg-blurple-hover text-white text-xs font-bold transition">Apply Bonus</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const guildId = '<%= guild.id %>';
+
+  // 1. Settings Form Slider
+  const ageSlider = document.getElementById('age-slider');
+  const ageDisplay = document.getElementById('age-display');
+  if (ageSlider && ageDisplay) {
+    ageSlider.addEventListener('input', (e) => {
+      ageDisplay.textContent = `${e.target.value} days`;
+    });
+  }
+
+  // Save Settings
+  const settingsForm = document.getElementById('invite-settings-form');
+  settingsForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById('save-settings-btn');
+    const origHtml = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⟳</span> Saving...';
+
+    const formData = new FormData(settingsForm);
+    const payload = {
+      enabled: formData.get('enabled') === 'on',
+      subtractLeaves: formData.get('subtractLeaves') === 'on',
+      minAccountAgeDays: parseInt(formData.get('minAccountAgeDays'), 10) || 7
+    };
+
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/invites/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Settings saved successfully!', 'success');
+      } else {
+        showToast(data.error || 'Failed to save settings', 'error');
+      }
+    } catch (err) {
+      showToast('Error saving settings: ' + err.message, 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = origHtml;
+      if (window.lucide) window.lucide.createIcons();
+    }
+  });
+
+  // 2. Add Role Reward Milestone
+  const rewardForm = document.getElementById('add-reward-form');
+  rewardForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const threshold = parseInt(document.getElementById('reward-threshold').value, 10);
+    const roleId = document.getElementById('reward-role-id').value;
+
+    if (!threshold || !roleId) {
+      return showToast('Please enter a valid threshold and select a role.', 'error');
+    }
+
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/invites/rewards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threshold, roleId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Milestone reward added!', 'success');
+        setTimeout(() => window.location.reload(), 600);
+      } else {
+        showToast(data.error || 'Failed to add reward', 'error');
+      }
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+    }
+  });
+
+  // Delete Role Reward Milestone
+  document.querySelectorAll('.delete-reward-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const threshold = btn.getAttribute('data-threshold');
+      if (!confirm(`Are you sure you want to delete the ${threshold}+ invites milestone?`)) return;
+
+      try {
+        const res = await fetch(`/api/guilds/${guildId}/invites/rewards/${threshold}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Milestone removed.', 'success');
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          showToast(data.error || 'Failed to delete reward', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    });
+  });
+
+  // 3. Search Filter in Table
+  const searchInput = document.getElementById('inviters-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      document.querySelectorAll('.inviter-row').forEach(row => {
+        const userId = row.getAttribute('data-userid').toLowerCase();
+        row.style.display = userId.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  // 4. Modal: Edit Bonus Invites
+  const bonusModal = document.getElementById('bonus-modal');
+  const modalUserId = document.getElementById('modal-user-id');
+  const modalUserDisplay = document.getElementById('modal-user-display');
+  const modalAmount = document.getElementById('modal-amount');
+  const closeBonusModal = document.getElementById('close-bonus-modal');
+  const cancelBonusBtn = document.getElementById('cancel-bonus-btn');
+  const bonusModalForm = document.getElementById('bonus-modal-form');
+
+  document.querySelectorAll('.edit-bonus-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const uid = btn.getAttribute('data-userid');
+      modalUserId.value = uid;
+      modalUserDisplay.textContent = `User: ${uid}`;
+      modalAmount.value = '';
+      bonusModal.classList.remove('hidden');
+      modalAmount.focus();
+    });
+  });
+
+  function hideModal() {
+    bonusModal.classList.add('hidden');
+  }
+
+  if (closeBonusModal) closeBonusModal.addEventListener('click', hideModal);
+  if (cancelBonusBtn) cancelBonusBtn.addEventListener('click', hideModal);
+
+  if (bonusModalForm) {
+    bonusModalForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = modalUserId.value;
+      const amount = parseInt(modalAmount.value, 10);
+      if (isNaN(amount)) return showToast('Please enter a valid amount.', 'error');
+
+      try {
+        const res = await fetch(`/api/guilds/${guildId}/invites/bonus`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, amount })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Bonus invites updated!', 'success');
+          hideModal();
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          showToast(data.error || 'Failed to update bonus', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    });
+  }
+
+  // 5. Reset Single User Invites
+  document.querySelectorAll('.reset-user-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const uid = btn.getAttribute('data-userid');
+      if (!confirm(`Are you sure you want to reset all invite stats for user ${uid}?`)) return;
+
+      try {
+        const res = await fetch(`/api/guilds/${guildId}/invites/reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('User invites reset!', 'success');
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          showToast(data.error || 'Failed to reset invites', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    });
+  });
+
+  // 6. Wipe All Server Invites Button
+  const wipeAllBtn = document.getElementById('wipe-all-invites-btn');
+  if (wipeAllBtn) {
+    wipeAllBtn.addEventListener('click', async () => {
+      const confirmText = prompt('WARNING: This will permanently wipe ALL invite statistics for every member in this server!\n\nType "CONFIRM WIPE" below to proceed:');
+      if (confirmText !== 'CONFIRM WIPE') {
+        return showToast('Wipe cancelled.', 'error');
+      }
+
+      try {
+        const res = await fetch(`/api/guilds/${guildId}/invites/reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('All server invites have been wiped.', 'success');
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          showToast(data.error || 'Failed to wipe invites', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    });
+  }
+
+  if (window.lucide) window.lucide.createIcons();
+});
+</script>
+
+<%- include('partials/footer') %>

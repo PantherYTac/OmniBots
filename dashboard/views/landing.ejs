@@ -1,0 +1,175 @@
+<%- include('partials/head', { title: 'Home' }) %>
+<%- include('partials/navbar') %>
+
+<!-- Hero Section -->
+<section class="relative overflow-hidden py-20 px-6">
+  <!-- Blurple Ambient Glow Background -->
+  <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-blurple/20 rounded-full blur-[140px] -z-10 pointer-events-none"></div>
+
+  <div class="max-w-5xl mx-auto text-center space-y-8">
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blurple/10 border border-blurple/30 text-blurple text-xs font-semibold tracking-wide">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      Hostinger Node.js Ready • Production-Grade
+    </div>
+
+    <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
+      The Next-Generation <br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-blurple via-indigo-400 to-purple-400">
+        All-in-One Discord System
+      </span>
+    </h1>
+
+    <p class="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
+      Carl-bot & BotGhost power, unified in one elegant platform. Featuring Carl-bot style auto-moderation, support tickets with HTML transcripts, custom canvas rank cards, reaction roles, and a sleek web dashboard.
+    </p>
+
+    <!-- Call to Actions -->
+    <div class="flex flex-wrap items-center justify-center gap-4 pt-4">
+      <% const botInvite = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`; %>
+      <a href="<%= botInvite %>" target="_blank" class="bg-blurple hover:bg-blurple-hover text-white font-bold px-8 py-3.5 rounded-xl shadow-xl shadow-blurple/30 transition flex items-center gap-3 transform hover:-translate-y-0.5">
+        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+        <span>Add to Discord</span>
+      </a>
+
+      <% if (typeof user !== 'undefined' && user) { %>
+        <a href="/dashboard" class="bg-[#131823] hover:bg-[#1E2538] text-white border border-[#1E2538] hover:border-slate-600 font-bold px-8 py-3.5 rounded-xl transition flex items-center gap-3">
+          <i data-lucide="layout-dashboard" class="w-5 h-5 text-blurple"></i>
+          <span>Open Dashboard</span>
+        </a>
+      <% } else { %>
+        <a href="/auth/discord" class="bg-[#131823] hover:bg-[#1E2538] text-white border border-[#1E2538] hover:border-slate-600 font-bold px-8 py-3.5 rounded-xl transition flex items-center gap-3">
+          <i data-lucide="log-in" class="w-5 h-5 text-blurple"></i>
+          <span>Login with Discord</span>
+        </a>
+      <% } %>
+    </div>
+
+    <!-- Live Stats Bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto pt-12">
+      <div class="glass-card p-6 text-center">
+        <div class="text-3xl font-black text-white"><%= stats.guilds.toLocaleString() %>+</div>
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-1">Servers Managed</div>
+      </div>
+      <div class="glass-card p-6 text-center">
+        <div class="text-3xl font-black text-blurple"><%= stats.users.toLocaleString() %>+</div>
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-1">Community Members</div>
+      </div>
+      <div class="glass-card p-6 text-center">
+        <div class="text-3xl font-black text-emerald-400"><%= stats.commands %></div>
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-1">Slash Commands</div>
+      </div>
+      <div class="glass-card p-6 text-center">
+        <div class="text-3xl font-black text-purple-400">99.9%</div>
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-1">System Uptime</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Feature Showcase Grid -->
+<section class="py-16 px-6 max-w-7xl mx-auto">
+  <div class="text-center mb-12">
+    <h2 class="text-2xl sm:text-3xl font-bold text-white">Engineered with Every Module You Need</h2>
+    <p class="text-slate-400 text-sm mt-2">Zero compromises. Fully configurable in Discord or through the real-time web dashboard.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Card 1 -->
+    <div class="glass-card glass-card-hover p-6 flex flex-col justify-between">
+      <div class="space-y-3">
+        <div class="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
+          <i data-lucide="shield-alert" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Carl-bot Moderation Engine</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Smart auto-moderation filtering invites, links, spam flood, and banned words. Configurable auto-escalation (3 warns = timeout, 5 = ban) and automatic sticky roles on member rejoin.
+        </p>
+      </div>
+      <div class="mt-4 pt-4 border-t border-[#1E2538] text-xs text-slate-500 font-mono">
+        /warn • /ban • /timeout • /purge
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="glass-card glass-card-hover p-6 flex flex-col justify-between">
+      <div class="space-y-3">
+        <div class="w-12 h-12 rounded-xl bg-blurple/10 border border-blurple/20 text-blurple flex items-center justify-center">
+          <i data-lucide="ticket" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">BotGhost Support Tickets</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Interactive multi-category ticket creation panels with Claim and Close workflows. Automatically generates full HTML transcripts archived and viewable directly in your browser.
+        </p>
+      </div>
+      <div class="mt-4 pt-4 border-t border-[#1E2538] text-xs text-slate-500 font-mono">
+        /ticket-panel • HTML Archiving
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="glass-card glass-card-hover p-6 flex flex-col justify-between">
+      <div class="space-y-3">
+        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+          <i data-lucide="mouse-pointer-click" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Reaction & Button Roles</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Carl-bot style reaction modes: normal toggle, unique single-choice groups, verify add-only, and temporary timed roles. Built with a live side-by-side Discord embed previewer.
+        </p>
+      </div>
+      <div class="mt-4 pt-4 border-t border-[#1E2538] text-xs text-slate-500 font-mono">
+        Live Web Designer • 1-Click Publish
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="glass-card glass-card-hover p-6 flex flex-col justify-between">
+      <div class="space-y-3">
+        <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 flex items-center justify-center">
+          <i data-lucide="award" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Canvas Leveling & Voice XP</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Earn XP via text messages and active voice channels. Features a visual /rank card powered by @napi-rs/canvas, automatic Level Role Rewards, and a public shareable web leaderboard.
+        </p>
+      </div>
+      <div class="mt-4 pt-4 border-t border-[#1E2538] text-xs text-slate-500 font-mono">
+        /rank • /leaderboard • Voice XP
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="glass-card glass-card-hover p-6 flex flex-col justify-between">
+      <div class="space-y-3">
+        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+          <i data-lucide="coins" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Economy, Shop & Minigames</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Daily streak rewards, jobs (/work), wallet & bank accounts, customizable server shop with role rewards, and interactive casino minigames: Blackjack, Slots, Coinflip, and RPS.
+        </p>
+      </div>
+      <div class="mt-4 pt-4 border-t border-[#1E2538] text-xs text-slate-500 font-mono">
+        /daily • /work • /blackjack • /shop
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="glass-card glass-card-hover p-6 flex flex-col justify-between">
+      <div class="space-y-3">
+        <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+          <i data-lucide="sparkles" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Google Gemini AI Chat</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Instant conversational AI answers inside your Discord server powered by @google/genai. Responds with formatted markdown and rich embeds.
+        </p>
+      </div>
+      <div class="mt-4 pt-4 border-t border-[#1E2538] text-xs text-slate-500 font-mono">
+        /ask • Powered by Gemini 4 Hydrogen
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

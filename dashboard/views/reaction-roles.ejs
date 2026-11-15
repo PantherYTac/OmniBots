@@ -1,0 +1,149 @@
+<%- include('partials/head', { title: `${guild.name} • Reaction Roles` }) %>
+<%- include('partials/navbar') %>
+
+<div class="flex-1 flex">
+  <%- include('partials/sidebar', { tab: 'reaction-roles', guild }) %>
+
+  <main class="flex-1 p-6 sm:p-10 space-y-8 overflow-y-auto max-w-7xl">
+    <div class="border-b border-[#1E2538] pb-6">
+      <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Reaction & Button Role Builder</h1>
+      <p class="text-slate-400 text-sm mt-1">Create interactive button panels to assign roles with live preview & 1-click Discord publishing.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Left: Configuration Form -->
+      <form id="rr-builder-form" action="/api/guilds/<%= guild.id %>/publish-reaction-panel" method="POST" class="glass-card p-6 space-y-6">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-blurple"></i>
+          <span>Configure Role Panel</span>
+        </h2>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Target Channel</label>
+          <select name="channelId" required class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
+            <% channels.forEach(ch => { %>
+              <option value="<%= ch.id %>"># <%= ch.name %></option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Panel Title</label>
+          <input type="text" id="panel_title" name="title" value="Select Your Roles" required class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Instructions / Description</label>
+          <textarea id="panel_desc" name="description" rows="3" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl p-4 text-white focus:outline-none focus:border-blurple text-sm">Click the buttons below to receive or remove notification roles:</textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Reaction Mode (Carl-bot Style)</label>
+          <select name="mode" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
+            <option value="normal">Normal (Click to add, click again to remove)</option>
+            <option value="unique">Unique (Single-choice group — removes other roles in group)</option>
+            <option value="verify">Verify (Add-only gate — cannot be untoggled)</option>
+            <option value="temp">Temporary (1-hour timed role expiry)</option>
+          </select>
+        </div>
+
+        <!-- Buttons / Roles Definitions -->
+        <div class="space-y-4 pt-4 border-t border-[#1E2538]">
+          <h3 class="text-sm font-bold text-white flex items-center justify-between">
+            <span>Button Roles (up to 5 buttons per row)</span>
+          </h3>
+
+          <div id="roles-container" class="space-y-3">
+            <!-- Row 1 -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-[#0B0E14] border border-[#1E2538]">
+              <div>
+                <label class="text-xs text-slate-500 mb-1 block">Label</label>
+                <input type="text" name="roleLabel[]" value="Announcements" placeholder="Button Label" class="w-full bg-[#131823] border border-[#1E2538] rounded-lg px-3 py-1.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-xs text-slate-500 mb-1 block">Emoji</label>
+                <input type="text" name="roleEmoji[]" value="🔔" placeholder="Emoji" class="w-full bg-[#131823] border border-[#1E2538] rounded-lg px-3 py-1.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-xs text-slate-500 mb-1 block">Assign Role</label>
+                <select name="roleId[]" class="w-full bg-[#131823] border border-[#1E2538] rounded-lg px-2 py-1.5 text-xs text-white">
+                  <% roles.forEach(r => { %>
+                    <option value="<%= r.id %>">@<%= r.name %></option>
+                  <% }); %>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-[#0B0E14] border border-[#1E2538]">
+              <div>
+                <label class="text-xs text-slate-500 mb-1 block">Label</label>
+                <input type="text" name="roleLabel[]" value="Events" placeholder="Button Label" class="w-full bg-[#131823] border border-[#1E2538] rounded-lg px-3 py-1.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-xs text-slate-500 mb-1 block">Emoji</label>
+                <input type="text" name="roleEmoji[]" value="🎉" placeholder="Emoji" class="w-full bg-[#131823] border border-[#1E2538] rounded-lg px-3 py-1.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-xs text-slate-500 mb-1 block">Assign Role</label>
+                <select name="roleId[]" class="w-full bg-[#131823] border border-[#1E2538] rounded-lg px-2 py-1.5 text-xs text-white">
+                  <% roles.forEach(r => { %>
+                    <option value="<%= r.id %>">@<%= r.name %></option>
+                  <% }); %>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-blurple hover:bg-blurple-hover text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blurple/25">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Publish Panel to Discord</span>
+        </button>
+      </form>
+
+      <!-- Right: Live Discord Previewer -->
+      <div class="glass-card p-6 flex flex-col">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2 mb-4">
+          <i data-lucide="eye" class="w-5 h-5 text-emerald-400"></i>
+          <span>Live Discord Client Preview</span>
+        </h2>
+
+        <div class="bg-[#2B2D31] rounded-2xl p-6 flex-1 flex flex-col justify-start space-y-4 border border-[#1E2538]">
+          <!-- Bot User Header -->
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blurple flex items-center justify-center font-bold text-white shadow-md">
+              ⚡
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-sm">Antigravity Bot</span>
+                <span class="bg-blurple text-[10px] text-white font-bold px-1.5 py-0.5 rounded">BOT</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Today at <%= new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></div>
+            </div>
+          </div>
+
+          <!-- Embed Preview -->
+          <div class="discord-embed-preview space-y-2">
+            <div id="preview_rr_title" class="font-bold text-white text-base">Select Your Roles</div>
+            <div id="preview_rr_desc" class="text-slate-300 text-sm whitespace-pre-wrap">Click the buttons below to receive or remove roles:</div>
+          </div>
+
+          <!-- Buttons Preview -->
+          <div class="flex flex-wrap gap-2 pt-2">
+            <button type="button" class="bg-[#4E5058] hover:bg-[#6D6F78] text-white text-xs font-semibold px-4 py-2 rounded flex items-center gap-1.5 cursor-default">
+              <span>🔔</span> <span>Announcements</span>
+            </button>
+            <button type="button" class="bg-[#4E5058] hover:bg-[#6D6F78] text-white text-xs font-semibold px-4 py-2 rounded flex items-center gap-1.5 cursor-default">
+              <span>🎉</span> <span>Events</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/live-preview.js"></script>
+<%- include('partials/footer') %>

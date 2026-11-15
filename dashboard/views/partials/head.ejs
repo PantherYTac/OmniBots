@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? `${title} • Bot Dashboard` : 'All-in-One Discord Bot Dashboard' %></title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            blurple: {
+              DEFAULT: '#5865F2',
+              hover: '#4752C4'
+            },
+            dark: {
+              900: '#0B0E14',
+              800: '#131823',
+              700: '#1E2538',
+              600: '#2A344D'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="bg-[#0B0E14] text-slate-200 min-h-screen flex flex-col antialiased">

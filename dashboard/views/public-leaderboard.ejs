@@ -1,0 +1,96 @@
+<%- include('partials/head', { title: `${guild ? guild.name : 'Server'} • Public Leaderboard` }) %>
+<%- include('partials/navbar') %>
+
+<main class="flex-1 max-w-5xl w-full mx-auto p-6 sm:p-10 space-y-8">
+  <!-- Server Hero Header -->
+  <div class="glass-card p-8 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+    <% const iconUrl = guild && guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128` : null; %>
+    <% if (iconUrl) { %>
+      <img src="<%= iconUrl %>" alt="<%= guild.name %>" class="w-20 h-20 rounded-2xl ring-4 ring-blurple/30 shadow-xl">
+    <% } else { %>
+      <div class="w-20 h-20 rounded-2xl bg-blurple/20 border border-blurple/40 text-blurple font-black text-2xl flex items-center justify-center">
+        <%= guild ? guild.name.substring(0, 2).toUpperCase() : 'SV' %>
+      </div>
+    <% } %>
+
+    <div class="space-y-1">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-semibold">
+        <i data-lucide="trophy" class="w-3.5 h-3.5"></i>
+        <span>Official Community Standings</span>
+      </div>
+      <h1 class="text-3xl font-black text-white tracking-tight"><%= guild ? guild.name : 'Discord Server' %> Leaderboard</h1>
+      <p class="text-slate-400 text-sm">Top ranked members by activity, text/voice XP, and server wealth.</p>
+    </div>
+  </div>
+
+  <!-- Leaderboard Table Card -->
+  <div class="glass-card p-6 space-y-4">
+    <div class="flex items-center justify-between border-b border-[#1E2538] pb-4">
+      <h2 class="text-lg font-bold text-white flex items-center gap-2">
+        <i data-lucide="award" class="w-5 h-5 text-blurple"></i>
+        <span>Top XP Champions</span>
+      </h2>
+      <span class="text-xs text-slate-500"><%= leaderboard.length %> Members Listed</span>
+    </div>
+
+    <% if (leaderboard.length === 0) { %>
+      <div class="text-center py-12 text-slate-500 text-sm">
+        No active members recorded on this server's leaderboard yet.
+      </div>
+    <% } else { %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="text-xs text-slate-400 border-b border-[#1E2538]">
+              <th class="py-3 px-4">Rank</th>
+              <th class="py-3 px-4">Member</th>
+              <th class="py-3 px-4">Level</th>
+              <th class="py-3 px-4">XP & Progress</th>
+              <th class="py-3 px-4 text-right">Messages</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#1E2538]">
+            <% leaderboard.forEach((entry, idx) => { %>
+              <% 
+                const progress = getLevelProgress(entry.xp || 0);
+                let rankBadge = `#${idx + 1}`;
+                let rankColor = 'text-slate-400';
+                if (idx === 0) { rankBadge = '🥇 #1'; rankColor = 'text-yellow-400 font-bold'; }
+                else if (idx === 1) { rankBadge = '🥈 #2'; rankColor = 'text-slate-200 font-bold'; }
+                else if (idx === 2) { rankBadge = '🥉 #3'; rankColor = 'text-amber-600 font-bold'; }
+              %>
+              <tr class="hover:bg-[#181F2E]/50 transition">
+                <td class="py-3.5 px-4 font-mono text-sm <%= rankColor %>"><%= rankBadge %></td>
+                <td class="py-3.5 px-4">
+                  <div class="flex items-center gap-3">
+                    <img src="<%= entry.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png' %>" alt="<%= entry.username %>" class="w-9 h-9 rounded-full ring-1 ring-[#1E2538]">
+                    <div class="font-semibold text-white"><%= entry.username %></div>
+                  </div>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="bg-blurple/15 border border-blurple/30 text-blurple font-bold px-2.5 py-0.5 rounded-full text-xs">
+                    Lvl <%= entry.level %>
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 min-w-[200px]">
+                  <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="text-slate-300 font-medium"><%= (entry.xp || 0).toLocaleString() %> XP</span>
+                    <span class="text-slate-500"><%= progress.percentage %>%</span>
+                  </div>
+                  <div class="w-full bg-[#0B0E14] h-2 rounded-full overflow-hidden">
+                    <div class="bg-gradient-to-r from-blurple to-indigo-400 h-full rounded-full" style="width: <%= progress.percentage %>%"></div>
+                  </div>
+                </td>
+                <td class="py-3.5 px-4 text-right text-slate-400 font-mono text-xs">
+                  <%= (entry.messages || 0).toLocaleString() %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

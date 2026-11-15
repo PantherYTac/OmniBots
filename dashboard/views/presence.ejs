@@ -1,0 +1,515 @@
+<%- include('partials/head', { title: 'Global Bot Presence & Status' }) %>
+<%- include('partials/navbar') %>
+
+<div class="flex-1 flex">
+  <%- include('partials/sidebar', { tab: 'presence', guild: typeof guild !== 'undefined' ? guild : null }) %>
+
+  <main class="flex-1 p-6 sm:p-10 space-y-8 overflow-y-auto max-w-6xl">
+    <!-- Header Banner -->
+    <div class="border-b border-[#1E2538] pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+          <i data-lucide="activity" class="w-8 h-8 text-blurple"></i>
+          <span>Global Bot Status & Presence</span>
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Configure real-time Discord presence, custom statuses, and automatic gateway-safe status rotation.</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Live Sync Active (15s Poll)
+        </span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Left Column: Presence Configuration (2 Cols) -->
+      <div class="lg:col-span-2 space-y-6">
+        <form id="presence-form" class="space-y-6">
+          <!-- 1. Online Indicator Selector -->
+          <div class="glass-card p-6 space-y-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="circle-dot" class="w-5 h-5 text-blurple"></i>
+              <span>Status Indicator</span>
+            </h2>
+            <p class="text-xs text-slate-400">Choose the online status indicator displayed on your bot's avatar across Discord.</p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <!-- Online -->
+              <label class="cursor-pointer">
+                <input type="radio" name="status" value="online" class="peer sr-only" <%= (botSettings.status === 'online' || !botSettings.status) ? 'checked' : '' %>>
+                <div class="p-3.5 rounded-xl border border-[#1E2538] bg-[#0B0E14] peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 flex items-center gap-3 transition">
+                  <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
+                  <div>
+                    <div class="text-sm font-semibold text-white">Online</div>
+                    <div class="text-[10px] text-slate-500">Active & Ready</div>
+                  </div>
+                </div>
+              </label>
+
+              <!-- Idle -->
+              <label class="cursor-pointer">
+                <input type="radio" name="status" value="idle" class="peer sr-only" <%= botSettings.status === 'idle' ? 'checked' : '' %>>
+                <div class="p-3.5 rounded-xl border border-[#1E2538] bg-[#0B0E14] peer-checked:border-amber-500 peer-checked:bg-amber-500/10 flex items-center gap-3 transition">
+                  <span class="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>
+                  <div>
+                    <div class="text-sm font-semibold text-white">Idle</div>
+                    <div class="text-[10px] text-slate-500">Away from Keyboard</div>
+                  </div>
+                </div>
+              </label>
+
+              <!-- Do Not Disturb -->
+              <label class="cursor-pointer">
+                <input type="radio" name="status" value="dnd" class="peer sr-only" <%= botSettings.status === 'dnd' ? 'checked' : '' %>>
+                <div class="p-3.5 rounded-xl border border-[#1E2538] bg-[#0B0E14] peer-checked:border-rose-500 peer-checked:bg-rose-500/10 flex items-center gap-3 transition">
+                  <span class="w-3.5 h-3.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>
+                  <div>
+                    <div class="text-sm font-semibold text-white">Do Not Disturb</div>
+                    <div class="text-[10px] text-slate-500">Muted Notifications</div>
+                  </div>
+                </div>
+              </label>
+
+              <!-- Invisible -->
+              <label class="cursor-pointer">
+                <input type="radio" name="status" value="invisible" class="peer sr-only" <%= botSettings.status === 'invisible' ? 'checked' : '' %>>
+                <div class="p-3.5 rounded-xl border border-[#1E2538] bg-[#0B0E14] peer-checked:border-slate-400 peer-checked:bg-slate-500/10 flex items-center gap-3 transition">
+                  <span class="w-3.5 h-3.5 rounded-full bg-slate-400"></span>
+                  <div>
+                    <div class="text-sm font-semibold text-white">Invisible</div>
+                    <div class="text-[10px] text-slate-500">Appear Offline</div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. Status Rotation Settings -->
+          <div class="glass-card p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="refresh-cw" class="w-5 h-5 text-blurple"></i>
+                  <span>Automatic Status Rotation</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Cycle through multiple status messages periodically without exceeding Discord gateway limits.</p>
+              </div>
+
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="rotation-toggle" name="rotationEnabled" class="sr-only peer" <%= botSettings.rotationEnabled ? 'checked' : '' %>>
+                <div class="w-11 h-6 bg-[#0B0E14] border border-[#1E2538] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blurple"></div>
+              </label>
+            </div>
+
+            <div id="rotation-slider-block" class="pt-3 border-t border-[#1E2538] space-y-2 <%= botSettings.rotationEnabled ? '' : 'opacity-40 pointer-events-none' %>">
+              <div class="flex items-center justify-between text-xs font-semibold">
+                <span class="text-slate-300">Rotation Interval:</span>
+                <span id="interval-display" class="text-blurple font-mono text-sm"><%= botSettings.rotationIntervalSeconds || 30 %> seconds</span>
+              </div>
+              <input type="range" id="interval-slider" name="rotationIntervalSeconds" min="15" max="300" step="5" value="<%= botSettings.rotationIntervalSeconds || 30 %>" class="w-full h-2 bg-[#0B0E14] rounded-lg appearance-none cursor-pointer accent-blurple">
+              <div class="flex justify-between text-[11px] text-slate-500 font-mono">
+                <span>15s (Minimum safe)</span>
+                <span>60s</span>
+                <span>300s (5 mins)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Activity List Builder -->
+          <div class="glass-card p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="list-plus" class="w-5 h-5 text-blurple"></i>
+                  <span>Activity Messages</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Configure status entries. Custom Status renders cleanly without "Playing" or "Watching" prefixes.</p>
+              </div>
+
+              <button type="button" id="add-activity-btn" class="px-3 py-1.5 rounded-lg bg-blurple/20 border border-blurple/40 text-blurple hover:bg-blurple hover:text-white text-xs font-semibold flex items-center gap-1.5 transition">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Add Activity</span>
+              </button>
+            </div>
+
+            <!-- Dynamic Activity Rows Container -->
+            <div id="activities-container" class="space-y-4 pt-2">
+              <!-- Rendered via JS and initial server data -->
+            </div>
+          </div>
+
+          <!-- Save Button Bar -->
+          <div class="flex items-center justify-between pt-2">
+            <div class="text-xs text-slate-500 flex items-center gap-1.5">
+              <i data-lucide="info" class="w-4 h-4"></i>
+              <span>Saved changes update the Discord bot in real-time.</span>
+            </div>
+
+            <button type="submit" id="save-presence-btn" class="px-6 py-3 rounded-xl bg-blurple hover:bg-blurple-hover text-white font-bold text-sm shadow-lg shadow-blurple/30 flex items-center gap-2 transition">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span>Save & Apply Status</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right Column: Live Discord Mini-Profile Preview (1 Col) -->
+      <div class="space-y-6">
+        <div class="glass-card p-6 space-y-4 sticky top-6">
+          <div class="flex items-center justify-between border-b border-[#1E2538] pb-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="eye" class="w-4 h-4 text-blurple"></i>
+              <span>Live Discord Preview</span>
+            </h3>
+            <span class="text-[10px] font-mono uppercase bg-[#0B0E14] px-2 py-0.5 rounded text-slate-400">Desktop Mockup</span>
+          </div>
+
+          <!-- Discord User Popout Box -->
+          <div class="w-full bg-[#18191c] rounded-2xl overflow-hidden border border-[#202225] shadow-2xl">
+            <!-- Banner / Header -->
+            <div class="h-16 bg-[#5865F2]/40 relative"></div>
+
+            <!-- Profile Info Area -->
+            <div class="px-4 pb-4 pt-0 relative">
+              <!-- Avatar with Live Status Dot -->
+              <div class="relative -mt-10 mb-3 inline-block">
+                <img src="<%= botUser.avatar %>" alt="<%= botUser.username %>" class="w-20 h-20 rounded-full border-4 border-[#18191c] bg-[#2f3136]">
+                <span id="preview-status-dot" class="absolute bottom-1 right-1 w-5 h-5 rounded-full border-4 border-[#18191c] bg-emerald-500 transition-colors"></span>
+              </div>
+
+              <!-- Username & Badge -->
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-base font-bold text-white"><%= botUser.username %></span>
+                <span class="text-[10px] font-extrabold uppercase bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                  <i data-lucide="check" class="w-2.5 h-2.5"></i> BOT
+                </span>
+              </div>
+              <div class="text-xs text-slate-400 font-medium mb-4"><%= botUser.tag %></div>
+
+              <!-- Live Status Output Box -->
+              <div class="p-3 rounded-xl bg-[#2b2d31] border border-[#35373c] space-y-2">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Activity</div>
+                
+                <div class="flex items-start gap-2.5">
+                  <div id="preview-activity-icon" class="w-5 h-5 text-blurple mt-0.5 flex-shrink-0">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                  </div>
+                  <div class="overflow-hidden">
+                    <div id="preview-activity-type" class="text-xs font-semibold text-white">Custom Status</div>
+                    <div id="preview-activity-text" class="text-xs text-slate-300 break-words mt-0.5">Loading preview...</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mock Bot Stats -->
+              <div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-[#232428] text-center text-xs">
+                <div class="p-2 rounded-lg bg-[#232428]">
+                  <div class="text-slate-400 text-[10px] uppercase font-semibold">Servers</div>
+                  <div class="text-white font-bold font-mono"><%= botUser.guildsCount.toLocaleString() %></div>
+                </div>
+                <div class="p-2 rounded-lg bg-[#232428]">
+                  <div class="text-slate-400 text-[10px] uppercase font-semibold">Users</div>
+                  <div class="text-white font-bold font-mono"><%= botUser.usersCount.toLocaleString() %></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable Reference Legend -->
+          <div class="p-4 rounded-xl bg-[#0B0E14] border border-[#1E2538] space-y-2">
+            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i data-lucide="code" class="w-3.5 h-3.5 text-blurple"></i>
+              <span>Available Dynamic Placeholders</span>
+            </div>
+            <div class="text-[11px] text-slate-400 space-y-1">
+              <div><code class="text-blurple font-mono">{servers}</code> — Total joined servers (<%= botUser.guildsCount %>)</div>
+              <div><code class="text-blurple font-mono">{users}</code> — Total cached members (<%= botUser.usersCount %>)</div>
+              <div><code class="text-blurple font-mono">{commands}</code> — Total loaded slash commands</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Initial Data Injection -->
+<script>
+  window.INITIAL_BOT_SETTINGS = <%- JSON.stringify(botSettings) %>;
+  window.BOT_STATS = {
+    servers: <%= botUser.guildsCount %>,
+    users: <%= botUser.usersCount %>,
+    commands: 28
+  };
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const container = document.getElementById('activities-container');
+  const addBtn = document.getElementById('add-activity-btn');
+  const form = document.getElementById('presence-form');
+  const rotationToggle = document.getElementById('rotation-toggle');
+  const rotationSliderBlock = document.getElementById('rotation-slider-block');
+  const intervalSlider = document.getElementById('interval-slider');
+  const intervalDisplay = document.getElementById('interval-display');
+
+  // Preview elements
+  const previewDot = document.getElementById('preview-status-dot');
+  const previewType = document.getElementById('preview-activity-type');
+  const previewText = document.getElementById('preview-activity-text');
+  const previewIcon = document.getElementById('preview-activity-icon');
+
+  let activities = window.INITIAL_BOT_SETTINGS.activities && window.INITIAL_BOT_SETTINGS.activities.length > 0
+    ? window.INITIAL_BOT_SETTINGS.activities
+    : [{ type: 'CUSTOM', text: '⚡ Protecting {servers} servers with {users} users', url: '' }];
+
+  // Rotation Slider visual feedback
+  if (intervalSlider && intervalDisplay) {
+    intervalSlider.addEventListener('input', (e) => {
+      intervalDisplay.textContent = `${e.target.value} seconds`;
+    });
+  }
+
+  // Rotation toggle styling
+  if (rotationToggle && rotationSliderBlock) {
+    rotationToggle.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        rotationSliderBlock.classList.remove('opacity-40', 'pointer-events-none');
+      } else {
+        rotationSliderBlock.classList.add('opacity-40', 'pointer-events-none');
+      }
+    });
+  }
+
+  // Interpolation helper for preview
+  function interpolate(text) {
+    return (text || '')
+      .replace(/\{servers\}/gi, (window.BOT_STATS.servers || 0).toLocaleString())
+      .replace(/\{users\}/gi, (window.BOT_STATS.users || 0).toLocaleString())
+      .replace(/\{commands\}/gi, (window.BOT_STATS.commands || 0).toLocaleString());
+  }
+
+  // Update Live Discord Mini-Profile Preview
+  function updatePreview() {
+    const selectedStatus = document.querySelector('input[name="status"]:checked')?.value || 'online';
+    previewDot.className = 'absolute bottom-1 right-1 w-5 h-5 rounded-full border-4 border-[#18191c] transition-colors';
+    if (selectedStatus === 'online') previewDot.classList.add('bg-emerald-500');
+    else if (selectedStatus === 'idle') previewDot.classList.add('bg-amber-500');
+    else if (selectedStatus === 'dnd') previewDot.classList.add('bg-rose-500');
+    else if (selectedStatus === 'invisible') previewDot.classList.add('bg-slate-500');
+
+    // First activity in list
+    const firstRow = container.querySelector('.activity-row');
+    if (!firstRow) {
+      previewType.textContent = 'No Status';
+      previewText.textContent = 'Bot has no active status message set.';
+      return;
+    }
+
+    const type = firstRow.querySelector('.activity-type-select').value;
+    const rawText = firstRow.querySelector('.activity-text-input').value;
+    const parsed = interpolate(rawText);
+
+    if (type === 'CUSTOM') {
+      previewType.textContent = 'Custom Status';
+      previewText.textContent = parsed || 'Online';
+      previewIcon.innerHTML = '<i data-lucide="sparkles" class="w-5 h-5"></i>';
+    } else if (type === 'PLAYING') {
+      previewType.textContent = 'Playing';
+      previewText.textContent = parsed || 'a game';
+      previewIcon.innerHTML = '<i data-lucide="gamepad-2" class="w-5 h-5"></i>';
+    } else if (type === 'WATCHING') {
+      previewType.textContent = 'Watching';
+      previewText.textContent = parsed || 'the server';
+      previewIcon.innerHTML = '<i data-lucide="tv" class="w-5 h-5"></i>';
+    } else if (type === 'LISTENING') {
+      previewType.textContent = 'Listening to';
+      previewText.textContent = parsed || 'music';
+      previewIcon.innerHTML = '<i data-lucide="headphones" class="w-5 h-5"></i>';
+    } else if (type === 'COMPETING') {
+      previewType.textContent = 'Competing in';
+      previewText.textContent = parsed || 'a tournament';
+      previewIcon.innerHTML = '<i data-lucide="trophy" class="w-5 h-5"></i>';
+    } else if (type === 'STREAMING') {
+      previewType.textContent = 'Streaming';
+      previewText.textContent = parsed || 'Live Stream';
+      previewIcon.innerHTML = '<i data-lucide="radio" class="w-5 h-5 text-purple-400"></i>';
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  // Render Activity Rows
+  function renderActivities() {
+    container.innerHTML = '';
+    activities.forEach((act, idx) => {
+      const row = document.createElement('div');
+      row.className = 'activity-row p-4 rounded-xl bg-[#0B0E14] border border-[#1E2538] space-y-3 relative group';
+
+      const isStreaming = (act.type || 'CUSTOM').toUpperCase() === 'STREAMING';
+
+      row.innerHTML = `
+        <div class="flex items-center justify-between pb-2 border-b border-[#1E2538]/60">
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-blurple/20 text-blurple font-mono text-xs flex items-center justify-center font-bold">${idx + 1}</span>
+            <span class="text-xs font-semibold text-slate-300">Activity Entry</span>
+          </div>
+          ${activities.length > 1 ? `
+            <button type="button" class="remove-btn text-slate-500 hover:text-red-400 p-1 rounded transition" title="Remove activity">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          ` : ''}
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Type</label>
+            <select class="activity-type-select w-full bg-[#131823] border border-[#1E2538] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blurple">
+              <option value="CUSTOM" ${act.type === 'CUSTOM' ? 'selected' : ''}>Custom Status (Clean)</option>
+              <option value="PLAYING" ${act.type === 'PLAYING' ? 'selected' : ''}>Playing</option>
+              <option value="WATCHING" ${act.type === 'WATCHING' ? 'selected' : ''}>Watching</option>
+              <option value="LISTENING" ${act.type === 'LISTENING' ? 'selected' : ''}>Listening</option>
+              <option value="COMPETING" ${act.type === 'COMPETING' ? 'selected' : ''}>Competing</option>
+              <option value="STREAMING" ${act.type === 'STREAMING' ? 'selected' : ''}>Streaming (Twitch/YouTube)</option>
+            </select>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Status Text</label>
+            <input type="text" class="activity-text-input w-full bg-[#131823] border border-[#1E2538] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blurple font-sans" value="${escapeHtml(act.text || '')}" placeholder="e.g. ⚡ Protecting {servers} servers with {users} users">
+            <div class="flex items-center gap-1.5 mt-1.5">
+              <span class="text-[10px] text-slate-500">Insert tag:</span>
+              <button type="button" class="insert-tag px-2 py-0.5 rounded bg-[#1E2538] hover:bg-blurple text-[10px] font-mono text-slate-300 hover:text-white transition" data-tag="{servers}">+{servers}</button>
+              <button type="button" class="insert-tag px-2 py-0.5 rounded bg-[#1E2538] hover:bg-blurple text-[10px] font-mono text-slate-300 hover:text-white transition" data-tag="{users}">+{users}</button>
+              <button type="button" class="insert-tag px-2 py-0.5 rounded bg-[#1E2538] hover:bg-blurple text-[10px] font-mono text-slate-300 hover:text-white transition" data-tag="{commands}">+{commands}</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stream-url-block ${isStreaming ? '' : 'hidden'}">
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Twitch / YouTube Stream URL</label>
+          <input type="url" class="activity-url-input w-full bg-[#131823] border border-[#1E2538] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blurple" value="${escapeHtml(act.url || '')}" placeholder="https://www.twitch.tv/discord">
+        </div>
+      `;
+
+      // Event listeners for row inputs
+      const typeSelect = row.querySelector('.activity-type-select');
+      const textInput = row.querySelector('.activity-text-input');
+      const urlBlock = row.querySelector('.stream-url-block');
+      const removeBtn = row.querySelector('.remove-btn');
+
+      typeSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'STREAMING') {
+          urlBlock.classList.remove('hidden');
+        } else {
+          urlBlock.classList.add('hidden');
+        }
+        updatePreview();
+      });
+
+      textInput.addEventListener('input', () => updatePreview());
+
+      // Clickable tag insertion
+      row.querySelectorAll('.insert-tag').forEach(tagBtn => {
+        tagBtn.addEventListener('click', () => {
+          const tag = tagBtn.getAttribute('data-tag');
+          const curVal = textInput.value;
+          const cursorPos = textInput.selectionStart || curVal.length;
+          textInput.value = curVal.slice(0, cursorPos) + tag + curVal.slice(cursorPos);
+          textInput.focus();
+          updatePreview();
+        });
+      });
+
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+          activities.splice(idx, 1);
+          renderActivities();
+          updatePreview();
+        });
+      }
+
+      container.appendChild(row);
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function escapeHtml(str) {
+    return (str || '').replace(/"/g, '&quot;');
+  }
+
+  // Add activity button
+  addBtn.addEventListener('click', () => {
+    activities.push({
+      type: 'CUSTOM',
+      text: 'Playing with {users} members',
+      url: ''
+    });
+    renderActivities();
+    updatePreview();
+  });
+
+  // Status radio changes update preview
+  document.querySelectorAll('input[name="status"]').forEach(radio => {
+    radio.addEventListener('change', updatePreview);
+  });
+
+  // Initial render
+  renderActivities();
+  updatePreview();
+
+  // Save via API
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById('save-presence-btn');
+    const origHtml = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⟳</span> Applying...';
+
+    // Collect latest activity rows from DOM
+    const currentRows = container.querySelectorAll('.activity-row');
+    const collectedActivities = [];
+    currentRows.forEach(row => {
+      const type = row.querySelector('.activity-type-select').value;
+      const text = row.querySelector('.activity-text-input').value;
+      const url = row.querySelector('.activity-url-input')?.value || '';
+      collectedActivities.push({ type, text, url });
+    });
+
+    const status = document.querySelector('input[name="status"]:checked')?.value || 'online';
+    const rotationEnabled = rotationToggle ? rotationToggle.checked : false;
+    const rotationIntervalSeconds = parseInt(intervalSlider?.value, 10) || 30;
+
+    try {
+      const res = await fetch('/api/bot/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status,
+          rotationEnabled,
+          rotationIntervalSeconds,
+          activities: collectedActivities
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Status applied to Discord!', 'success');
+      } else {
+        showToast(data.error || 'Failed to apply status', 'error');
+      }
+    } catch (err) {
+      showToast('Network error saving status: ' + err.message, 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = origHtml;
+      if (window.lucide) window.lucide.createIcons();
+    }
+  });
+});
+</script>
+
+<%- include('partials/footer') %>

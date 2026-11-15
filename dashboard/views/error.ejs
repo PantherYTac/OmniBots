@@ -1,0 +1,24 @@
+<%- include('partials/head', { title: 'Error' }) %>
+<%- include('partials/navbar') %>
+
+<main class="flex-1 flex items-center justify-center p-6">
+  <div class="glass-card p-10 max-w-lg w-full text-center space-y-6">
+    <div class="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+      <i data-lucide="alert-octagon" class="w-8 h-8"></i>
+    </div>
+
+    <div>
+      <h1 class="text-2xl font-bold text-white"><%= status || 500 %> — Error</h1>
+      <p class="text-slate-400 text-sm mt-2"><%= message || 'An unexpected server error occurred.' %></p>
+    </div>
+
+    <div class="pt-2">
+      <a href="/dashboard" class="inline-flex items-center gap-2 bg-blurple hover:bg-blurple-hover text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition shadow-lg shadow-blurple/25">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span>Return to Dashboard</span>
+      </a>
+    </div>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

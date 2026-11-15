@@ -1,0 +1,15 @@
+node_modules/
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+*.local
+/shared/data/*.json
+/shared/data/*.sqlite
+/shared/data/*.db
+logs/
+.nyc_output
+coverage
+dist
+temp

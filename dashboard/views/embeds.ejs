@@ -1,0 +1,112 @@
+<%- include('partials/head', { title: `${guild.name} • Embed Builder` }) %>
+<%- include('partials/navbar') %>
+
+<div class="flex-1 flex">
+  <%- include('partials/sidebar', { tab: 'embeds', guild }) %>
+
+  <main class="flex-1 p-6 sm:p-10 space-y-8 overflow-y-auto max-w-7xl">
+    <div class="border-b border-[#1E2538] pb-6">
+      <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Embed & Announcement Designer</h1>
+      <p class="text-slate-400 text-sm mt-1">Compose rich Discord announcements and send them with live real-time visual preview.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Left: Designer Form -->
+      <form id="embed-builder-form" action="/api/guilds/<%= guild.id %>/send-embed" method="POST" class="glass-card p-6 space-y-5">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-blurple"></i>
+          <span>Announcement Properties</span>
+        </h2>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Send to Channel</label>
+          <select name="channelId" required class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
+            <% channels.forEach(ch => { %>
+              <option value="<%= ch.id %>"># <%= ch.name %></option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Embed Title</label>
+            <input type="text" id="embed_title" name="title" value="Important Server Announcement 📢" required class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Sidebar Color</label>
+            <input type="color" id="embed_color" name="color" value="#5865F2" class="w-full h-10 rounded-xl bg-transparent border-0 cursor-pointer">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Description / Body (Supports Discord Markdown)</label>
+          <textarea id="embed_description" name="description" rows="5" required class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl p-4 text-white focus:outline-none focus:border-blurple text-sm">We are thrilled to unveil our new server update! Check out the new channels and perks.</textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Thumbnail URL (Top Right)</label>
+            <input type="url" id="embed_thumbnail" name="thumbnailUrl" placeholder="https://..." class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blurple text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Banner Image URL</label>
+            <input type="url" id="embed_image" name="imageUrl" placeholder="https://..." class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blurple text-sm">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Footer Text</label>
+          <input type="text" id="embed_footer" name="footerText" value="Official Server Staff Team" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blurple text-sm">
+        </div>
+
+        <button type="submit" class="w-full bg-blurple hover:bg-blurple-hover text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blurple/25">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Send Announcement to Channel</span>
+        </button>
+      </form>
+
+      <!-- Right: Real-time Discord Client Preview -->
+      <div class="glass-card p-6 flex flex-col">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2 mb-4">
+          <i data-lucide="eye" class="w-5 h-5 text-emerald-400"></i>
+          <span>Real-time Live Preview</span>
+        </h2>
+
+        <div class="bg-[#2B2D31] rounded-2xl p-6 flex-1 flex flex-col justify-start space-y-4 border border-[#1E2538]">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blurple flex items-center justify-center font-bold text-white shadow-md">
+              ⚡
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-sm">Antigravity Bot</span>
+                <span class="bg-blurple text-[10px] text-white font-bold px-1.5 py-0.5 rounded">BOT</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Today at <%= new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></div>
+            </div>
+          </div>
+
+          <!-- Embed Preview Box -->
+          <div id="preview_embed_box" class="discord-embed-preview space-y-3 relative">
+            <div class="flex justify-between items-start gap-4">
+              <div class="space-y-2 flex-1">
+                <div id="preview_embed_title" class="font-bold text-white text-base">Important Server Announcement 📢</div>
+                <div id="preview_embed_desc" class="text-slate-300 text-sm whitespace-pre-wrap">We are thrilled to unveil our new server update! Check out the new channels and perks.</div>
+              </div>
+              <img id="preview_embed_thumb" src="" alt="Thumbnail" class="w-16 h-16 rounded object-cover hidden">
+            </div>
+
+            <img id="preview_embed_image" src="" alt="Banner" class="w-full max-h-60 rounded object-cover hidden">
+
+            <div id="preview_embed_footer" class="text-xs text-slate-400 pt-2 border-t border-slate-700/50">
+              Official Server Staff Team
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/live-preview.js"></script>
+<%- include('partials/footer') %>

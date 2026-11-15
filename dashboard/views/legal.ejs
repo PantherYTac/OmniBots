@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> • Antigravity Discord Systems</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            blurple: {
+              DEFAULT: '#5865F2',
+              hover: '#4752C4'
+            },
+            dark: {
+              900: '#0B0E14',
+              800: '#131823',
+              700: '#1E2538',
+              600: '#2A344D'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Marked.js for fast Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Custom Typography & Dark Styling -->
+  <style>
+    body {
+      background-color: #0B0E14;
+      color: #E2E8F0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .glass-card {
+      background: rgba(19, 24, 35, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid #1E2538;
+      border-radius: 1rem;
+    }
+    /* Typography inside rendered markdown */
+    #markdown-body h1 {
+      font-size: 1.875rem;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-top: 1rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid #1E2538;
+      padding-bottom: 0.75rem;
+      letter-spacing: -0.025em;
+    }
+    #markdown-body h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #F8FAFC;
+      margin-top: 2rem;
+      margin-bottom: 0.875rem;
+      border-bottom: 1px solid #1E2538/60;
+      padding-bottom: 0.5rem;
+      scroll-margin-top: 5rem;
+    }
+    #markdown-body h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #E2E8F0;
+      margin-top: 1.5rem;
+      margin-bottom: 0.625rem;
+      scroll-margin-top: 5rem;
+    }
+    #markdown-body p {
+      margin-bottom: 1rem;
+      line-height: 1.7;
+      color: #CBD5E1;
+      font-size: 0.9375rem;
+    }
+    #markdown-body ul, #markdown-body ol {
+      margin-bottom: 1.25rem;
+      padding-left: 1.5rem;
+      color: #CBD5E1;
+      line-height: 1.7;
+      font-size: 0.9375rem;
+    }
+    #markdown-body ul { list-style-type: disc; }
+    #markdown-body ol { list-style-type: decimal; }
+    #markdown-body li { margin-bottom: 0.35rem; }
+    #markdown-body strong { color: #FFFFFF; font-weight: 600; }
+    #markdown-body a {
+      color: #5865F2;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s;
+    }
+    #markdown-body a:hover { color: #818CF8; }
+    #markdown-body blockquote {
+      border-left: 4px solid #5865F2;
+      background: rgba(88, 101, 242, 0.08);
+      padding: 0.875rem 1.25rem;
+      margin: 1.25rem 0;
+      border-radius: 0 0.75rem 0.75rem 0;
+      color: #CBD5E1;
+      font-size: 0.9rem;
+    }
+    #markdown-body blockquote p:last-child { margin-bottom: 0; }
+    #markdown-body code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85em;
+      background: #0B0E14;
+      border: 1px solid #1E2538;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.375rem;
+      color: #A5B4FC;
+    }
+    #markdown-body hr {
+      border-color: #1E2538;
+      margin: 2rem 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#0B0E14] text-slate-200 antialiased selection:bg-blurple selection:text-white">
+
+  <!-- Public Top Navigation Header -->
+  <header class="border-b border-[#1E2538] bg-[#0B0E14]/90 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Brand Logo & Title -->
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-xl bg-blurple flex items-center justify-center text-white shadow-lg shadow-blurple/30 group-hover:scale-105 transition transform">
+          <i data-lucide="shield" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="font-bold text-base tracking-tight text-white group-hover:text-blurple transition">Antigravity Bot</span>
+          <span class="text-xs text-slate-500 block -mt-1 font-mono">Legal & Compliance</span>
+        </div>
+      </a>
+
+      <!-- Document Switcher Pills -->
+      <div class="flex items-center gap-2 bg-[#131823] border border-[#1E2538] p-1 rounded-xl">
+        <a href="/privacy" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 <%= type === 'privacy' ? 'bg-blurple text-white shadow-sm shadow-blurple/30' : 'text-slate-400 hover:text-white hover:bg-[#1E2538]' %>">
+          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+          <span>Privacy Policy</span>
+        </a>
+        <a href="/terms" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 <%= type === 'terms' ? 'bg-blurple text-white shadow-sm shadow-blurple/30' : 'text-slate-400 hover:text-white hover:bg-[#1E2538]' %>">
+          <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+          <span>Terms of Service</span>
+        </a>
+      </div>
+
+      <!-- Action Button (Back to Dashboard / Login) -->
+      <div class="hidden sm:flex items-center gap-3">
+        <% if (typeof user !== 'undefined' && user) { %>
+          <a href="/dashboard" class="px-3.5 py-1.5 rounded-lg bg-[#1E2538] hover:bg-[#2A344D] text-slate-300 hover:text-white text-xs font-medium transition flex items-center gap-1.5">
+            <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+            <span>Back to Dashboard</span>
+          </a>
+        <% } else { %>
+          <a href="/login" class="px-3.5 py-1.5 rounded-lg bg-[#1E2538] hover:bg-[#2A344D] text-slate-300 hover:text-white text-xs font-medium transition flex items-center gap-1.5">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+            <span>Admin Login</span>
+          </a>
+        <% } %>
+      </div>
+    </div>
+  </header>
+
+  <!-- Document Container -->
+  <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <!-- Notice Hero Banner -->
+    <div class="glass-card p-6 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-l-4 border-l-blurple">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <i data-lucide="check-circle-2" class="w-3 h-3"></i>
+            <span>Discord Verification Ready</span>
+          </span>
+          <span class="text-xs text-slate-500">•</span>
+          <span class="text-xs text-slate-400 font-mono">
+            Last Updated: <%= new Date(updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %>
+          </span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">
+          <%= type === 'privacy' ? 'Official Privacy Policy' : 'Official Terms of Service' %>
+        </h1>
+        <p class="text-slate-400 text-xs sm:text-sm mt-1">
+          <%= type === 'privacy' 
+            ? 'Compliant with the Discord Developer Policy, GDPR, and CCPA data protection guidelines.'
+            : 'Governing user interactions, administrator rules, and server economy systems.' %>
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <a href="<%= supportServer %>" target="_blank" class="px-3.5 py-2 rounded-xl bg-[#1E2538] hover:bg-[#2A344D] text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition">
+          <i data-lucide="message-square" class="w-3.5 h-3.5 text-blurple"></i>
+          <span>Support Server</span>
+        </a>
+        <a href="mailto:<%= contactEmail %>" class="px-3.5 py-2 rounded-xl bg-blurple/20 hover:bg-blurple text-blurple hover:text-white text-xs font-semibold flex items-center gap-1.5 transition border border-blurple/30">
+          <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+          <span>Contact Legal</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Layout Grid: Table of Contents (Left) & Document Body (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      
+      <!-- Sticky Sidebar: Table of Contents -->
+      <aside class="hidden lg:block lg:col-span-1">
+        <div class="sticky top-24 glass-card p-5 space-y-3">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 pb-2 border-b border-[#1E2538]">
+            <i data-lucide="list" class="w-4 h-4 text-blurple"></i>
+            <span>Table of Contents</span>
+          </div>
+
+          <nav id="table-of-contents" class="space-y-1 text-xs max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
+            <!-- Dynamically populated via JS from rendered markdown headings -->
+            <div class="text-slate-500 italic py-2">Loading document outline...</div>
+          </nav>
+
+          <% if (type === 'privacy') { %>
+            <div class="pt-3 border-t border-[#1E2538]">
+              <div class="p-3 rounded-lg bg-[#0B0E14] border border-[#1E2538] text-[11px] text-slate-400 space-y-1.5">
+                <div class="font-bold text-white flex items-center gap-1">
+                  <i data-lucide="trash-2" class="w-3 h-3 text-red-400"></i>
+                  <span>Delete Your Data</span>
+                </div>
+                <div>Run <code class="text-blurple">/delete-my-data</code> in any Discord server to purge all stored stats.</div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </aside>
+
+      <!-- Main Reading Area -->
+      <main class="lg:col-span-3">
+        <article class="glass-card p-6 sm:p-10 shadow-xl border border-[#1E2538]">
+          <!-- Rendered Markdown Body -->
+          <div id="markdown-body">
+            <!-- Raw content injected here and parsed by marked.js -->
+            <noscript>
+              <pre class="whitespace-pre-wrap font-sans"><%= content %></pre>
+            </noscript>
+          </div>
+        </article>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- Raw Content Injected for Fast Client-Side Render -->
+  <script id="raw-markdown-content" type="text/plain"><%= content %></script>
+
+  <!-- Markdown Parser & Table of Contents Generator -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Render Markdown with Marked.js
+      const rawMarkdown = document.getElementById('raw-markdown-content').textContent;
+      const target = document.getElementById('markdown-body');
+      
+      if (window.marked) {
+        target.innerHTML = marked.parse(rawMarkdown);
+      } else {
+        target.innerHTML = '<pre class="whitespace-pre-wrap font-sans text-slate-300">' + rawMarkdown + '</pre>';
+      }
+
+      // 2. Generate Dynamic Table of Contents from h2 elements
+      const tocNav = document.getElementById('table-of-contents');
+      const headings = target.querySelectorAll('h2');
+
+      if (tocNav && headings.length > 0) {
+        tocNav.innerHTML = '';
+        headings.forEach((heading, idx) => {
+          // Ensure heading has an anchor ID
+          if (!heading.id) {
+            heading.id = 'section-' + (idx + 1) + '-' + heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+          }
+
+          const link = document.createElement('a');
+          link.href = '#' + heading.id;
+          link.className = 'block py-1.5 px-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E2538] transition truncate';
+          link.textContent = heading.textContent.replace(/^[\d\.\s]+/, ''); // Clean up numbers
+          link.title = heading.textContent;
+          tocNav.appendChild(link);
+        });
+      }
+
+      // 3. Initialize Lucide Icons
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    });
+  </script>
+
+  <!-- Public Footer -->
+  <footer class="mt-auto border-t border-[#1E2538] bg-[#0B0E14] py-8 px-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        © <%= new Date().getFullYear() %> Antigravity Discord Systems • Hosted securely on Hostinger Node.js Cloud
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="/privacy" class="hover:text-slate-300 transition <%= type === 'privacy' ? 'text-blurple font-semibold' : '' %>">Privacy Policy</a>
+        <a href="/terms" class="hover:text-slate-300 transition <%= type === 'terms' ? 'text-blurple font-semibold' : '' %>">Terms of Service</a>
+        <a href="https://discord.com/developers/docs" target="_blank" class="hover:text-slate-300 transition">Discord API</a>
+        <a href="/" class="hover:text-slate-300 transition">Home</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

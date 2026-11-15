@@ -1,0 +1,152 @@
+<%- include('partials/head', { title: `${guild.name} • Overview` }) %>
+<%- include('partials/navbar') %>
+
+<div class="flex-1 flex">
+  <%- include('partials/sidebar', { tab: 'overview', guild }) %>
+
+  <main class="flex-1 p-6 sm:p-10 space-y-8 overflow-y-auto max-w-7xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1E2538] pb-6">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight"><%= guild.name %> Overview</h1>
+        <p class="text-slate-400 text-sm mt-1">Live metrics, server activity graphs, and audit history.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/dashboard/<%= guild.id %>/general" class="bg-blurple hover:bg-blurple-hover text-white text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2">
+          <i data-lucide="sliders" class="w-4 h-4"></i>
+          <span>Configure Modules</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 4 Real-time Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- Member Count -->
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Members</span>
+          <div class="w-9 h-9 rounded-lg bg-blurple/10 border border-blurple/20 text-blurple flex items-center justify-center">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="text-3xl font-black text-white mt-3"><%= (guild.memberCount || 0).toLocaleString() %></div>
+        <div class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+          <span class="text-emerald-400 font-semibold">● Live</span> connected server members
+        </div>
+      </div>
+
+      <!-- Active Tickets -->
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Tickets</span>
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <i data-lucide="ticket" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="text-3xl font-black text-white mt-3"><%= openTicketsCount %></div>
+        <div class="text-xs text-slate-400 mt-1">
+          <a href="/dashboard/<%= guild.id %>/tickets" class="text-blurple hover:underline">View open tickets →</a>
+        </div>
+      </div>
+
+      <!-- Automod Triggers Today -->
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">AutoMod Filtered</span>
+          <div class="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
+            <i data-lucide="shield-alert" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="text-3xl font-black text-white mt-3"><%= automodTriggersToday %></div>
+        <div class="text-xs text-slate-400 mt-1">Blocked violations in last 24h</div>
+      </div>
+
+      <!-- Top Active User -->
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Top XP Leader</span>
+          <div class="w-9 h-9 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 flex items-center justify-center">
+            <i data-lucide="crown" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="text-xl font-bold text-white mt-3 truncate"><%= topUser ? topUser.name : 'No active users' %></div>
+        <div class="text-xs text-slate-400 mt-1">
+          <%= topUser ? `Level ${topUser.level} • ${topUser.xp.toLocaleString()} XP` : 'Waiting for chat' %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart.js 7-Day Activity Analytics -->
+    <div class="glass-card p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white">Server Activity (Last 7 Days)</h2>
+          <p class="text-xs text-slate-400">Real-time message traffic and member XP progression.</p>
+        </div>
+        <span class="text-xs text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+          Live Tracking
+        </span>
+      </div>
+
+      <div class="h-72 w-full">
+        <canvas id="activityChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Recent Audit Logs Table -->
+    <div class="glass-card p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-[#1E2538] pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white">Recent Server Audit Events</h2>
+          <p class="text-xs text-slate-400">Chronological log of moderation actions, member joins, and automod events.</p>
+        </div>
+        <span class="text-xs text-slate-500"><%= recentLogs.length %> Events</span>
+      </div>
+
+      <% if (recentLogs.length === 0) { %>
+        <div class="text-center py-8 text-slate-500 text-sm">
+          No audit logs recorded for this server yet.
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="text-xs text-slate-400 border-b border-[#1E2538]">
+                <th class="py-2.5 px-3">Event</th>
+                <th class="py-2.5 px-3">Description</th>
+                <th class="py-2.5 px-3">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#1E2538]">
+              <% recentLogs.forEach(log => { %>
+                <tr class="hover:bg-[#181F2E]/50 transition">
+                  <td class="py-3 px-3">
+                    <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-blurple/10 text-blurple border border-blurple/20">
+                      <%= log.type %>
+                    </span>
+                  </td>
+                  <td class="py-3 px-3 text-slate-300 font-medium"><%= log.description %></td>
+                  <td class="py-3 px-3 text-slate-500 text-xs whitespace-nowrap">
+                    <%= new Date(log.timestamp).toLocaleString() %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<script src="/js/charts.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const labels = <%- JSON.stringify(chartLabels) %>;
+    const msgData = <%- JSON.stringify(chartMsgData) %>;
+    const xpData = <%- JSON.stringify(chartXpData) %>;
+    renderActivityChart('activityChart', labels, msgData, xpData);
+  });
+</script>
+
+<%- include('partials/footer') %>

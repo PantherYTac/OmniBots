@@ -1,0 +1,53 @@
+{
+  "name": "discord-bot-dashboard",
+  "version": "1.0.0",
+  "description": "Production-ready, all-in-one Discord.js v14 Bot with a modern Express.js + Tailwind CSS Web Dashboard for Hostinger Node.js hosting",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:dashboard": "node dashboard/server.js",
+    "start:bot": "node bot/index.js",
+    "start:all": "node index.js",
+    "deploy:commands": "node bot/deploy-commands.js",
+    "generate-hash": "node scripts/generate-hash.js",
+    "dev": "nodemon index.js",
+    "dev:dashboard": "nodemon dashboard/server.js",
+    "dev:bot": "nodemon bot/index.js"
+  },
+  "keywords": [
+    "discord-bot",
+    "discordjs-v14",
+    "web-dashboard",
+    "hostinger-ready",
+    "moderation",
+    "tickets",
+    "reaction-roles",
+    "leveling",
+    "economy"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/rest": "^2.4.0",
+    "@google/genai": "^3.2.0",
+    "@napi-rs/canvas": "^0.1.66",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "discord-api-types": "^0.37.104",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "mongoose": "^8.9.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

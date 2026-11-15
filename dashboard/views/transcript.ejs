@@ -1,0 +1,13 @@
+<% if (ticket && ticket.transcriptHtml) { %>
+  <%- ticket.transcriptHtml %>
+<% } else { %>
+  <%- include('partials/head', { title: 'Transcript Not Found' }) %>
+  <div class="min-h-screen flex items-center justify-center p-6">
+    <div class="glass-card p-8 max-w-md text-center space-y-4">
+      <h1 class="text-xl font-bold text-white">Transcript Not Available</h1>
+      <p class="text-slate-400 text-sm">This ticket has either not been closed yet or does not exist.</p>
+      <a href="/dashboard" class="inline-block bg-blurple text-white text-sm font-semibold px-4 py-2 rounded-lg">Return to Dashboard</a>
+    </div>
+  </div>
+  <%- include('partials/footer') %>
+<% } %>
