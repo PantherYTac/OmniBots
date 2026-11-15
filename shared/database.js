@@ -87,7 +87,7 @@ function createDefaultBotSettings() {
     activities: [
       {
         type: 'CUSTOM',
-        text: '⚡ Protecting {servers} servers with {users} users',
+        text: 'Protecting {servers} servers with {users} users',
         url: ''
       }
     ],

@@ -124,7 +124,7 @@ function applySettings(client, settings) {
 
   const activities = Array.isArray(settings.activities) && settings.activities.length > 0
     ? settings.activities
-    : [{ type: 'CUSTOM', text: '⚡ Protecting {servers} servers with {users} users', url: '' }];
+    : [{ type: 'CUSTOM', text: 'Protecting {servers} servers with {users} users', url: '' }];
 
   const status = settings.status || 'online';
 
