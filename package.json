@@ -2,16 +2,17 @@
   "name": "omnibots",
   "version": "2.0.0",
   "description": "OmniBots - Open-Source, Self-Hostable All-in-One Multi-Bot Discord Management Panel & Bot Engine (discord.js v14 + Express.js)",
-  "main": "index.js",
+  "main": "dashboard/server.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node dashboard/server.js",
     "test": "node test/e2e-omnibots.js",
     "start:dashboard": "node dashboard/server.js",
     "start:bot": "node bot/index.js",
     "start:all": "node index.js",
     "deploy:commands": "node bot/deploy-commands.js",
     "generate-hash": "node scripts/generate-hash.js",
-    "dev": "nodemon index.js",
+    "dev": "nodemon dashboard/server.js",
+    "dev:all": "nodemon index.js",
     "dev:dashboard": "nodemon dashboard/server.js",
     "dev:bot": "nodemon bot/index.js"
   },
@@ -31,7 +32,6 @@
   "dependencies": {
     "@discordjs/rest": "^2.4.0",
     "@google/genai": "^3.2.0",
-    "@napi-rs/canvas": "^0.1.66",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -44,6 +44,9 @@
     "express-session": "^1.18.1",
     "mongoose": "^8.9.0",
     "pg": "^8.13.1"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas": "^0.1.66"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

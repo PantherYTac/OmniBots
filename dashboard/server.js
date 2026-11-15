@@ -19,8 +19,18 @@ const DatabaseSessionStore = require('./middleware/sessionStore');
 // Express App Initialization
 const app = express();
 
-// Trust reverse proxy for Hostinger (needed for secure cookies & accurate client IP in rate-limiters)
+// Trust reverse proxy for Hostinger, Nginx, Cloudflare & all SSL proxies
 app.set('trust proxy', 1);
+
+// Immediate Lightweight Healthcheck (Zero Middleware / Zero Database dependency)
+// Responds instantly so host healthcheckers (Hostinger, Render, Railway, Koyeb) never mark app down
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
 
 // View Engine Setup (EJS)
 app.set('view engine', 'ejs');
@@ -49,7 +59,7 @@ app.use(session({
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     httpOnly: true, // Mitigate XSS cookie theft
     sameSite: 'lax', // Mitigate CSRF
-    secure: process.env.NODE_ENV === 'production' && (process.env.CALLBACK_URL || '').startsWith('https://')
+    secure: 'auto' // Seamlessly adapts to HTTPS proxies and local HTTP without login redirect loops
   }
 }));
 
@@ -87,26 +97,50 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Global Process Crash-Guards: Prevent unhandled Discord API / Gateway errors from crashing web app
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Promise Rejection safely trapped:', reason, 'CRASH_GUARD');
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception safely trapped:', err, 'CRASH_GUARD');
+});
+
 // Server Starter
 async function startDashboard() {
   try {
-    // 1. Initialize Database
-    await db.init();
+    const PORT = parseInt(process.env.PORT, 10) || 3000;
+    const HOST = '0.0.0.0'; // Essential for Hostinger reverse proxy routing
 
-    // 2. Initialize Master Admin Credentials
-    initAdminCredentials();
-
-    // 3. Start Express HTTP Server
-    const PORT = process.env.PORT || 3000;
-    const server = app.listen(PORT, () => {
-      logger.success(`Web Dashboard online and listening on port ${PORT}`, 'HOSTINGER_DASHBOARD');
-      logger.info(`Master Admin Login Gate active at http://localhost:${PORT}/login`, 'HOSTINGER_DASHBOARD');
+    // 1. Start Express HTTP Server FIRST so the website is immediately accessible
+    const server = app.listen(PORT, HOST, () => {
+      logger.success(`OmniBots Web Dashboard online and listening on ${HOST}:${PORT}`, 'HOSTINGER_DASHBOARD');
+      logger.info(`Master Admin Login Gate active at http://${HOST}:${PORT}/login`, 'HOSTINGER_DASHBOARD');
       logger.info(`Hostinger Entrypoint: dashboard/server.js ready`, 'HOSTINGER_DASHBOARD');
     });
 
+    // 2. Initialize Database & Bot Fleet asynchronously in the background
+    (async () => {
+      try {
+        await db.init();
+        initAdminCredentials();
+        logger.success('Shared database and Master Admin initialized.', 'STARTUP');
+      } catch (dbErr) {
+        logger.error('Non-fatal error during database initialization:', dbErr, 'STARTUP');
+      }
+
+      try {
+        const { botManager } = require('../bot/BotManager');
+        await botManager.init();
+        logger.success('BotManager fleet initialization completed.', 'STARTUP');
+      } catch (botErr) {
+        logger.error('Non-fatal error during BotManager fleet initialization:', botErr, 'STARTUP');
+      }
+    })();
+
     return server;
   } catch (err) {
-    logger.error('Failed to start Dashboard server', err, 'HOSTINGER_DASHBOARD');
+    logger.error('Failed to bind Dashboard server port', err, 'HOSTINGER_DASHBOARD');
     throw err;
   }
 }

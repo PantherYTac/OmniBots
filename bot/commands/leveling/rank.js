@@ -28,7 +28,9 @@ module.exports = {
 
     try {
       const buffer = await generateRankCard(targetUser, member, userLevel, rankPos);
-      const attachment = new AttachmentBuilder(buffer, { name: `rank-${targetUser.id}.png` });
+      const isSvg = Buffer.isBuffer(buffer) && buffer.toString('utf8', 0, 10).includes('<svg');
+      const ext = isSvg ? 'svg' : 'png';
+      const attachment = new AttachmentBuilder(buffer, { name: `rank-${targetUser.id}.${ext}` });
 
       return interaction.editReply({ files: [attachment] });
     } catch (err) {
