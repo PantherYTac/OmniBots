@@ -5,6 +5,7 @@
 
 const { REST, Routes, ChannelType, ButtonStyle } = require('discord.js');
 const logger = require('../../shared/utils/logger');
+const { botManager } = require('../../bot/BotManager');
 
 let inProcessClient = null;
 
@@ -12,18 +13,39 @@ function setInProcessClient(client) {
   inProcessClient = client;
 }
 
+function getClientForGuild(guildId) {
+  if (inProcessClient && inProcessClient.guilds?.cache?.has(guildId)) {
+    return inProcessClient;
+  }
+  for (const client of botManager.clients.values()) {
+    if (client.guilds?.cache?.has(guildId)) {
+      return client;
+    }
+  }
+  return inProcessClient || botManager.getPrimaryClient();
+}
+
 function getRest() {
+  const primary = botManager.getPrimaryClient();
+  if (primary?.token) {
+    return new REST({ version: '10' }).setToken(primary.token);
+  }
   const token = process.env.DISCORD_TOKEN;
   if (!token) return null;
   return new REST({ version: '10' }).setToken(token);
 }
 
 /**
- * Check if the bot is present in a guild
+ * Check if any managed bot is present in a guild
  */
 async function isBotInGuild(guildId) {
-  if (inProcessClient) {
-    return inProcessClient.guilds.cache.has(guildId);
+  if (inProcessClient && inProcessClient.guilds?.cache?.has(guildId)) {
+    return true;
+  }
+  for (const client of botManager.clients.values()) {
+    if (client.guilds?.cache?.has(guildId)) {
+      return true;
+    }
   }
   try {
     const rest = getRest();
@@ -39,8 +61,9 @@ async function isBotInGuild(guildId) {
  * Fetch text channels for a guild
  */
 async function getGuildChannels(guildId) {
-  if (inProcessClient) {
-    const guild = inProcessClient.guilds.cache.get(guildId);
+  const client = getClientForGuild(guildId);
+  if (client?.guilds?.cache) {
+    const guild = client.guilds.cache.get(guildId);
     if (guild) {
       return guild.channels.cache
         .filter(c => c.isTextBased())
@@ -65,8 +88,9 @@ async function getGuildChannels(guildId) {
  * Fetch categories for a guild
  */
 async function getGuildCategories(guildId) {
-  if (inProcessClient) {
-    const guild = inProcessClient.guilds.cache.get(guildId);
+  const client = getClientForGuild(guildId);
+  if (client?.guilds?.cache) {
+    const guild = client.guilds.cache.get(guildId);
     if (guild) {
       return guild.channels.cache
         .filter(c => c.type === ChannelType.GuildCategory)
@@ -90,8 +114,9 @@ async function getGuildCategories(guildId) {
  * Fetch roles for a guild
  */
 async function getGuildRoles(guildId) {
-  if (inProcessClient) {
-    const guild = inProcessClient.guilds.cache.get(guildId);
+  const client = getClientForGuild(guildId);
+  if (client?.guilds?.cache) {
+    const guild = client.guilds.cache.get(guildId);
     if (guild) {
       return guild.roles.cache
         .filter(r => r.id !== guild.id)
@@ -118,8 +143,9 @@ async function getGuildRoles(guildId) {
  * Fetch guild member count and details
  */
 async function getGuildDetails(guildId) {
-  if (inProcessClient) {
-    const guild = inProcessClient.guilds.cache.get(guildId);
+  const client = getClientForGuild(guildId);
+  if (client?.guilds?.cache) {
+    const guild = client.guilds.cache.get(guildId);
     if (guild) {
       return {
         id: guild.id,
@@ -207,17 +233,41 @@ async function sendEmbedAnnouncement(channelId, embedData) {
 }
 
 /**
- * Fetch all guilds where the bot is a member (using in-process client or Bot token)
+ * Fetch all guilds where any managed bot is a member
  */
 async function getBotGuilds() {
-  if (inProcessClient) {
-    return Array.from(inProcessClient.guilds.cache.values()).map(g => ({
-      id: g.id,
-      name: g.name,
-      icon: g.icon,
-      memberCount: g.memberCount,
-      botInGuild: true
-    }));
+  const guildMap = new Map();
+
+  if (inProcessClient?.guilds?.cache) {
+    for (const g of inProcessClient.guilds.cache.values()) {
+      guildMap.set(g.id, {
+        id: g.id,
+        name: g.name,
+        icon: g.icon,
+        memberCount: g.memberCount,
+        botInGuild: true
+      });
+    }
+  }
+
+  for (const client of botManager.clients.values()) {
+    if (client.guilds?.cache) {
+      for (const g of client.guilds.cache.values()) {
+        if (!guildMap.has(g.id)) {
+          guildMap.set(g.id, {
+            id: g.id,
+            name: g.name,
+            icon: g.icon,
+            memberCount: g.memberCount,
+            botInGuild: true
+          });
+        }
+      }
+    }
+  }
+
+  if (guildMap.size > 0) {
+    return Array.from(guildMap.values());
   }
 
   try {

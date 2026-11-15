@@ -9,8 +9,12 @@ const { getLevelProgress } = require('../../shared/utils/helpers');
 const { getGuildDetails } = require('../middleware/botClient');
 const { requireAdminAuth } = require('../middleware/auth');
 
-// Root Route: Redirects to /dashboard if logged in, otherwise redirects to /login gate
-router.get('/', (req, res) => {
+// Root Route: Redirects to /setup if not configured, /dashboard if logged in, otherwise /login gate
+router.get('/', async (req, res) => {
+  const hasAdmin = await db.admin.hasAdmin();
+  if (!hasAdmin) {
+    return res.redirect('/setup');
+  }
   if (req.session && req.session.isAdmin === true) {
     return res.redirect('/dashboard');
   }

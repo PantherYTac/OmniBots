@@ -5,9 +5,10 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 *.local
-/shared/data/*.json
-/shared/data/*.sqlite
-/shared/data/*.db
+data/
+/data/
+shared/data/
+/shared/data/
 logs/
 .nyc_output
 coverage

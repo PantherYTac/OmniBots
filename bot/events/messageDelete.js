@@ -6,11 +6,23 @@
 const { EmbedBuilder } = require('discord.js');
 const { db } = require('../../shared');
 const { truncate } = require('../../shared/utils/helpers');
+const { snipeStore } = require('../commands/community/snipe');
 
 module.exports = {
   name: 'messageDelete',
   async execute(message, client) {
     if (!message.guild || message.author?.bot) return;
+
+    // Cache message for /snipe command
+    if (snipeStore && message.channel) {
+      snipeStore.set(message.channel.id, {
+        content: message.content,
+        authorTag: message.author?.tag || 'Unknown Member',
+        authorAvatar: message.author?.displayAvatarURL?.() || null,
+        imageUrl: message.attachments?.first?.()?.url || null,
+        timestamp: Date.now()
+      });
+    }
 
     const guildSettings = await db.guilds.get(message.guild.id);
     if (!guildSettings.modules?.logging || !guildSettings.logging?.enabled) return;

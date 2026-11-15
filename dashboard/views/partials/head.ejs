@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= typeof title !== 'undefined' ? `${title} • Bot Dashboard` : 'All-in-One Discord Bot Dashboard' %></title>
+  <title><%= typeof title !== 'undefined' ? `${title} • OmniBots` : 'OmniBots • All-in-One Multi-Bot Discord Platform' %></title>
   
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -16,6 +20,9 @@
             blurple: {
               DEFAULT: '#5865F2',
               hover: '#4752C4'
+            },
+            cyan: {
+              accent: '#38BDF8'
             },
             dark: {
               900: '#0B0E14',

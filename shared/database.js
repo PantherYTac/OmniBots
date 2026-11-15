@@ -41,7 +41,11 @@ let memoryStore = {
   botSettings: null,
   invites: {},
   inviteMembers: {},
-  legalDocuments: null
+  legalDocuments: null,
+  adminUsers: {},
+  managedBots: {},
+  commandsConfig: {},
+  modCases: []
 };
 
 // Ensure data directory exists
@@ -1289,6 +1293,227 @@ const db = {
 
       logger.info(`Completed user data purge for User ID ${userId}`, 'COMPLIANCE');
       return result;
+    }
+  },
+
+  // 19. Admin Authentication & Setup
+  admin: {
+    async hasAdmin() {
+      // 1. Check database
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT COUNT(*) FROM shared_collections WHERE collection_name = 'adminUsers'");
+        if (parseInt(res.rows[0].count, 10) > 0) return true;
+      } else {
+        if (memoryStore.adminUsers && Object.keys(memoryStore.adminUsers).length > 0) return true;
+      }
+      // 2. Check environment overrides
+      if (process.env.ADMIN_PASSWORD_HASH || (process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD !== 'change_this_master_password_immediately')) {
+        return true;
+      }
+      return false;
+    },
+
+    async createAdmin(username, passwordHash) {
+      const cleanUsername = (username || 'admin').trim().toLowerCase();
+      const userDoc = {
+        username: cleanUsername,
+        passwordHash,
+        createdAt: Date.now(),
+        lastLogin: null
+      };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query(`
+          INSERT INTO shared_collections (collection_name, doc_id, data, updated_at)
+          VALUES ('adminUsers', $1, $2, NOW())
+          ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $2, updated_at = NOW()
+        `, [cleanUsername, userDoc]);
+      } else {
+        memoryStore.adminUsers[cleanUsername] = userDoc;
+        saveLocalStore();
+      }
+      return userDoc;
+    },
+
+    async getAdmin(username) {
+      const cleanUsername = (username || '').trim().toLowerCase();
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'adminUsers' AND doc_id = $1", [cleanUsername]);
+        if (res.rows.length > 0) return res.rows[0].data;
+      } else {
+        if (memoryStore.adminUsers[cleanUsername]) return memoryStore.adminUsers[cleanUsername];
+      }
+
+      // Check environment fallback
+      const envUsername = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
+      if (cleanUsername === envUsername) {
+        if (process.env.ADMIN_PASSWORD_HASH) {
+          return { username: envUsername, passwordHash: process.env.ADMIN_PASSWORD_HASH };
+        }
+        if (process.env.ADMIN_PASSWORD) {
+          const bcrypt = require('bcryptjs');
+          return { username: envUsername, passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD, 12) };
+        }
+      }
+
+      return null;
+    }
+  },
+
+  // 20. Managed Discord Bots (Multi-Bot Engine)
+  managedBots: {
+    async list() {
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'managedBots'");
+        return res.rows.map(r => r.data);
+      }
+      return Object.values(memoryStore.managedBots || {});
+    },
+
+    async get(botId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'managedBots' AND doc_id = $1", [botId]);
+        if (res.rows.length > 0) return res.rows[0].data;
+      } else {
+        if (memoryStore.managedBots[botId]) return memoryStore.managedBots[botId];
+      }
+      return null;
+    },
+
+    async save(botId, data) {
+      const existing = (await this.get(botId)) || {};
+      const entry = { ...existing, ...data, id: botId, updatedAt: Date.now() };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query(`
+          INSERT INTO shared_collections (collection_name, doc_id, data, updated_at)
+          VALUES ('managedBots', $1, $2, NOW())
+          ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $2, updated_at = NOW()
+        `, [botId, entry]);
+      } else {
+        memoryStore.managedBots[botId] = entry;
+        saveLocalStore();
+      }
+      return entry;
+    },
+
+    async updateStatus(botId, status) {
+      const bot = await this.get(botId);
+      if (bot) {
+        bot.status = status;
+        await this.save(botId, bot);
+      }
+    },
+
+    async delete(botId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("DELETE FROM shared_collections WHERE collection_name = 'managedBots' AND doc_id = $1", [botId]);
+      } else {
+        delete memoryStore.managedBots[botId];
+        saveLocalStore();
+      }
+      return true;
+    }
+  },
+
+  // 21. Per-Guild Commands & Permissions Configuration
+  commandsConfig: {
+    async get(guildId) {
+      const def = {
+        guildId,
+        prefix: '!',
+        secondaryPrefixes: [],
+        allowMentionPrefix: true,
+        commands: {},
+        modules: {
+          moderation: true,
+          automod: true,
+          logging: true,
+          invites: true,
+          reactionRoles: true,
+          tickets: true,
+          leveling: true,
+          economy: true,
+          tempVoice: true,
+          community: true,
+          automation: true
+        }
+      };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'commandsConfig' AND doc_id = $1", [guildId]);
+        if (res.rows.length > 0) return { ...def, ...res.rows[0].data };
+      } else {
+        if (memoryStore.commandsConfig[guildId]) return { ...def, ...memoryStore.commandsConfig[guildId] };
+      }
+      return def;
+    },
+
+    async set(guildId, data) {
+      const current = await this.get(guildId);
+      const entry = { ...current, ...data, guildId, updatedAt: Date.now() };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query(`
+          INSERT INTO shared_collections (collection_name, doc_id, data, updated_at)
+          VALUES ('commandsConfig', $1, $2, NOW())
+          ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $2, updated_at = NOW()
+        `, [guildId, entry]);
+      } else {
+        memoryStore.commandsConfig[guildId] = entry;
+        saveLocalStore();
+      }
+      return entry;
+    },
+
+    async update(guildId, partial) {
+      const current = await this.get(guildId);
+      return this.set(guildId, { ...current, ...partial });
+    }
+  },
+
+  // 22. Moderation Cases
+  modCases: {
+    async create(guildId, caseData) {
+      const currentCases = await this.list(guildId);
+      const nextNumber = currentCases.length + 1;
+      const caseId = `CASE-${String(nextNumber).padStart(4, '0')}`;
+
+      const entry = {
+        caseId,
+        caseNumber: nextNumber,
+        guildId,
+        targetId: caseData.targetId,
+        targetTag: caseData.targetTag || 'Unknown',
+        moderatorId: caseData.moderatorId,
+        moderatorTag: caseData.moderatorTag || 'Staff',
+        action: caseData.action, // 'warn' | 'mute' | 'kick' | 'ban' | 'softban' | 'tempban'
+        reason: caseData.reason || 'No reason provided',
+        duration: caseData.duration || null,
+        active: true,
+        createdAt: Date.now()
+      };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query(`
+          INSERT INTO shared_collections (collection_name, doc_id, data, updated_at)
+          VALUES ('modCases', $1, $2, NOW())
+        `, [`${guildId}_${caseId}`, entry]);
+      } else {
+        memoryStore.modCases.unshift(entry);
+        saveLocalStore();
+      }
+      return entry;
+    },
+
+    async list(guildId, limit = 100) {
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'modCases' AND data->>'guildId' = $1 ORDER BY (data->>'createdAt')::bigint DESC LIMIT $2", [guildId, limit]);
+        return res.rows.map(r => r.data);
+      }
+      return (memoryStore.modCases || [])
+        .filter(c => c.guildId === guildId)
+        .slice(0, limit);
     }
   }
 };

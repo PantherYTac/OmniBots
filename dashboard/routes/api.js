@@ -8,6 +8,7 @@ const { requireAdminAuth, canManageGuild } = require('../middleware/auth');
 const { db } = require('../../shared');
 const { publishReactionPanel, sendEmbedAnnouncement, getInProcessClient } = require('../middleware/botClient');
 const { applySettings } = require('../../bot/utils/presenceManager');
+const { botManager } = require('../../bot/BotManager');
 const logger = require('../../shared/utils/logger');
 
 // 1. General & Module Settings Save
@@ -436,6 +437,131 @@ router.post('/bot/legal/reset', requireAdminAuth, async (req, res) => {
   } catch (err) {
     logger.error('Failed to reset legal documents', err, 'LEGAL_API');
     return res.status(500).json({ success: false, error: 'Internal error resetting legal documents.' });
+  }
+});
+
+// 16. Multi-Bot Fleet Management API
+router.get('/bots', requireAdminAuth, async (req, res) => {
+  try {
+    const list = await botManager.listBots();
+    return res.json({ success: true, bots: list });
+  } catch (err) {
+    logger.error('Failed to list bots', err, 'BOT_API');
+    return res.status(500).json({ success: false, error: 'Internal server error listing bots.' });
+  }
+});
+
+router.post('/bots', requireAdminAuth, async (req, res) => {
+  try {
+    const { token, name } = req.body;
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ success: false, error: 'Bot token is required.' });
+    }
+
+    const newBot = await botManager.addBot(token, name);
+    return res.json({ success: true, message: 'Bot successfully connected and registered!', bot: newBot });
+  } catch (err) {
+    logger.error('Failed to add bot instance', err, 'BOT_API');
+    return res.status(400).json({ success: false, error: err.message || 'Invalid bot token or failed to authenticate with Discord.' });
+  }
+});
+
+router.post('/bots/:botId/start', requireAdminAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    await botManager.restartBot(botId);
+    return res.json({ success: true, message: `Bot [${botId}] started successfully.` });
+  } catch (err) {
+    logger.error(`Failed to start bot ${req.params.botId}`, err, 'BOT_API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to start bot.' });
+  }
+});
+
+router.post('/bots/:botId/stop', requireAdminAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    await botManager.stopBot(botId);
+    return res.json({ success: true, message: `Bot [${botId}] stopped.` });
+  } catch (err) {
+    logger.error(`Failed to stop bot ${req.params.botId}`, err, 'BOT_API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to stop bot.' });
+  }
+});
+
+router.post('/bots/:botId/restart', requireAdminAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    await botManager.restartBot(botId);
+    return res.json({ success: true, message: `Bot [${botId}] restarted.` });
+  } catch (err) {
+    logger.error(`Failed to restart bot ${req.params.botId}`, err, 'BOT_API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to restart bot.' });
+  }
+});
+
+router.delete('/bots/:botId', requireAdminAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    if (botId === 'primary') {
+      return res.status(400).json({ success: false, error: 'Primary bot cannot be deleted.' });
+    }
+    await botManager.deleteBot(botId);
+    return res.json({ success: true, message: `Bot [${botId}] removed.` });
+  } catch (err) {
+    logger.error(`Failed to delete bot ${req.params.botId}`, err, 'BOT_API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to delete bot.' });
+  }
+});
+
+router.post('/bots/:botId/sync-commands', requireAdminAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const result = await botManager.syncSlashCommands(botId);
+    if (result.success) {
+      return res.json({ success: true, message: `Successfully registered ${result.count} global application commands!`, count: result.count });
+    } else {
+      return res.status(500).json({ success: false, error: result.error || 'Failed to sync slash commands.' });
+    }
+  } catch (err) {
+    logger.error(`Failed to sync slash commands for ${req.params.botId}`, err, 'BOT_API');
+    return res.status(500).json({ success: false, error: err.message || 'Error syncing slash commands.' });
+  }
+});
+
+// 17. Per-Guild Commands & Permissions Customization API
+router.get('/guilds/:guildId/commands-config', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+    const config = await db.commandsConfig.get(guildId);
+    return res.json({ success: true, config });
+  } catch (err) {
+    logger.error('Failed to get commands config', err, 'COMMANDS_API');
+    return res.status(500).json({ success: false, error: 'Internal server error getting command configurations.' });
+  }
+});
+
+router.post('/guilds/:guildId/commands-config', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+    const { prefix, secondaryPrefixes, allowMentionPrefix, modules, commands } = req.body;
+
+    const current = await db.commandsConfig.get(guildId);
+    const updated = {
+      ...current,
+      prefix: typeof prefix === 'string' && prefix.trim() ? prefix.trim() : current.prefix,
+      secondaryPrefixes: Array.isArray(secondaryPrefixes) 
+        ? secondaryPrefixes 
+        : (typeof secondaryPrefixes === 'string' ? secondaryPrefixes.split(/[,\s]+/).filter(Boolean) : current.secondaryPrefixes),
+      allowMentionPrefix: typeof allowMentionPrefix === 'boolean' ? allowMentionPrefix : current.allowMentionPrefix,
+      modules: typeof modules === 'object' && modules !== null ? { ...current.modules, ...modules } : current.modules,
+      commands: typeof commands === 'object' && commands !== null ? { ...current.commands, ...commands } : current.commands
+    };
+
+    const saved = await db.commandsConfig.set(guildId, updated);
+    return res.json({ success: true, message: 'Command and permission rules updated successfully!', config: saved });
+  } catch (err) {
+    logger.error('Failed to save commands config', err, 'COMMANDS_API');
+    return res.status(500).json({ success: false, error: 'Internal server error saving command configurations.' });
   }
 });
 

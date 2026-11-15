@@ -1,0 +1,224 @@
+<!-- Universal Reusable Discord Embed Builder Partial -->
+<div class="space-y-6" id="<%= typeof builderId !== 'undefined' ? builderId : 'universal_embed_builder' %>">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Builder Controls -->
+    <div class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Embed Title</label>
+          <input 
+            type="text" 
+            id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_title" 
+            name="<%= typeof inputPrefix !== 'undefined' ? inputPrefix + '[title]' : 'title' %>" 
+            value="<%= typeof initialTitle !== 'undefined' ? initialTitle : '📢 Server Announcement' %>"
+            placeholder="Embed Title"
+            class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-blurple"
+          >
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Accent Color</label>
+          <div class="flex items-center gap-2">
+            <input 
+              type="color" 
+              id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_color_picker" 
+              value="<%= typeof initialColor !== 'undefined' ? initialColor : '#5865F2' %>"
+              class="w-9 h-9 rounded-lg bg-transparent border-0 cursor-pointer"
+            >
+            <input 
+              type="text" 
+              id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_color" 
+              name="<%= typeof inputPrefix !== 'undefined' ? inputPrefix + '[color]' : 'color' %>" 
+              value="<%= typeof initialColor !== 'undefined' ? initialColor : '#5865F2' %>"
+              class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-2.5 py-2 text-white text-xs font-mono focus:outline-none focus:border-blurple"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Description</label>
+          <div class="flex items-center gap-1 text-[11px] text-slate-500">
+            <span>Variables:</span>
+            <span class="cursor-pointer text-cyan-accent hover:underline font-mono" onclick="insertEbVar('{user}', '<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_desc')">{user}</span>
+            <span class="cursor-pointer text-cyan-accent hover:underline font-mono" onclick="insertEbVar('{server}', '<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_desc')">{server}</span>
+            <span class="cursor-pointer text-cyan-accent hover:underline font-mono" onclick="insertEbVar('{members}', '<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_desc')">{members}</span>
+          </div>
+        </div>
+        <textarea 
+          id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_desc" 
+          name="<%= typeof inputPrefix !== 'undefined' ? inputPrefix + '[description]' : 'description' %>" 
+          rows="4"
+          placeholder="Embed description supports Discord markdown (**bold**, *italic*, [links](https://...))"
+          class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl p-3 text-white text-sm focus:outline-none focus:border-blurple"
+        ><%= typeof initialDesc !== 'undefined' ? initialDesc : 'Welcome to the server! Please read the rules and enjoy your stay.' %></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Thumbnail URL (Small)</label>
+          <input 
+            type="url" 
+            id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_thumb" 
+            name="<%= typeof inputPrefix !== 'undefined' ? inputPrefix + '[thumbnailUrl]' : 'thumbnailUrl' %>" 
+            value="<%= typeof initialThumb !== 'undefined' ? initialThumb : '' %>"
+            placeholder="https://..."
+            class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blurple"
+          >
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Image / Banner URL (Large)</label>
+          <input 
+            type="url" 
+            id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_image" 
+            name="<%= typeof inputPrefix !== 'undefined' ? inputPrefix + '[imageUrl]' : 'imageUrl' %>" 
+            value="<%= typeof initialImage !== 'undefined' ? initialImage : '' %>"
+            placeholder="https://..."
+            class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blurple"
+          >
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Footer Text</label>
+        <input 
+          type="text" 
+          id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_footer" 
+          name="<%= typeof inputPrefix !== 'undefined' ? inputPrefix + '[footerText]' : 'footerText' %>" 
+          value="<%= typeof initialFooter !== 'undefined' ? initialFooter : 'OmniBots Official • Powered by community' %>"
+          placeholder="Footer message"
+          class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blurple"
+        >
+      </div>
+    </div>
+
+    <!-- Live Preview Display -->
+    <div class="bg-[#2B2D31] rounded-2xl p-5 flex flex-col justify-between border border-[#1E2538] relative min-h-[260px]">
+      <div class="space-y-3">
+        <!-- Discord Bot Header -->
+        <div class="flex items-center gap-2.5">
+          <img src="/images/logo.svg" alt="Bot" class="w-8 h-8 rounded-full bg-blurple/20 p-1">
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-white text-xs">OmniBots</span>
+              <span class="bg-blurple text-[9px] text-white font-black px-1 py-0.2 rounded">BOT</span>
+            </div>
+            <div class="text-[10px] text-slate-400">Today at <%= new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></div>
+          </div>
+        </div>
+
+        <!-- Rendered Discord Embed Card -->
+        <div 
+          id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_preview_card" 
+          class="rounded-lg p-3.5 space-y-2.5 border-l-4 transition-all duration-150 relative bg-[#1E1F22]"
+          style="border-left-color: <%= typeof initialColor !== 'undefined' ? initialColor : '#5865F2' %>;"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="space-y-1.5 flex-1">
+              <div id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_preview_title" class="font-bold text-white text-sm">
+                <%= typeof initialTitle !== 'undefined' ? initialTitle : '📢 Server Announcement' %>
+              </div>
+              <div id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_preview_desc" class="text-slate-300 text-xs whitespace-pre-wrap leading-relaxed">
+                <%= typeof initialDesc !== 'undefined' ? initialDesc : 'Welcome to the server! Please read the rules and enjoy your stay.' %>
+              </div>
+            </div>
+            <img 
+              id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_preview_thumb" 
+              src="<%= typeof initialThumb !== 'undefined' ? initialThumb : '' %>" 
+              alt="Thumbnail" 
+              class="w-14 h-14 rounded-md object-cover <%= typeof initialThumb !== 'undefined' && initialThumb ? '' : 'hidden' %>"
+            >
+          </div>
+
+          <img 
+            id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_preview_image" 
+            src="<%= typeof initialImage !== 'undefined' ? initialImage : '' %>" 
+            alt="Banner Image" 
+            class="w-full max-h-48 rounded-md object-cover <%= typeof initialImage !== 'undefined' && initialImage ? '' : 'hidden' %>"
+          >
+
+          <div id="<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>_preview_footer" class="text-[11px] text-slate-400 pt-1.5 border-t border-[#2B2D31] flex items-center gap-1.5">
+            <span><%= typeof initialFooter !== 'undefined' ? initialFooter : 'OmniBots Official • Powered by community' %></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-[10px] text-slate-500 pt-2 text-right">
+        ⚡ Live Real-Time Discord Client Render
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function insertEbVar(varText, fieldId) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    const start = el.selectionStart || 0;
+    const end = el.selectionEnd || 0;
+    el.value = el.value.substring(0, start) + varText + el.value.substring(end);
+    el.focus();
+    el.dispatchEvent(new Event('input'));
+  }
+
+  (function initEmbedBuilder_<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>() {
+    const pfx = '<%= typeof prefix !== 'undefined' ? prefix : 'eb' %>';
+    const titleInput = document.getElementById(`${pfx}_title`);
+    const descInput = document.getElementById(`${pfx}_desc`);
+    const colorInput = document.getElementById(`${pfx}_color`);
+    const colorPicker = document.getElementById(`${pfx}_color_picker`);
+    const thumbInput = document.getElementById(`${pfx}_thumb`);
+    const imageInput = document.getElementById(`${pfx}_image`);
+    const footerInput = document.getElementById(`${pfx}_footer`);
+
+    const card = document.getElementById(`${pfx}_preview_card`);
+    const titlePreview = document.getElementById(`${pfx}_preview_title`);
+    const descPreview = document.getElementById(`${pfx}_preview_desc`);
+    const thumbPreview = document.getElementById(`${pfx}_preview_thumb`);
+    const imagePreview = document.getElementById(`${pfx}_preview_image`);
+    const footerPreview = document.getElementById(`${pfx}_preview_footer`);
+
+    function update() {
+      if (titleInput && titlePreview) titlePreview.textContent = titleInput.value || 'Untitled Embed';
+      if (descInput && descPreview) descPreview.textContent = descInput.value || '';
+      if (footerInput && footerPreview) footerPreview.textContent = footerInput.value || '';
+
+      const color = colorInput?.value || '#5865F2';
+      if (card) card.style.borderLeftColor = color;
+      if (colorPicker && colorPicker.value !== color && /^#[0-9A-Fa-f]{6}$/.test(color)) {
+        colorPicker.value = color;
+      }
+
+      if (thumbInput && thumbPreview) {
+        if (thumbInput.value.trim()) {
+          thumbPreview.src = thumbInput.value.trim();
+          thumbPreview.classList.remove('hidden');
+        } else {
+          thumbPreview.classList.add('hidden');
+        }
+      }
+
+      if (imageInput && imagePreview) {
+        if (imageInput.value.trim()) {
+          imagePreview.src = imageInput.value.trim();
+          imagePreview.classList.remove('hidden');
+        } else {
+          imagePreview.classList.add('hidden');
+        }
+      }
+    }
+
+    [titleInput, descInput, footerInput, thumbInput, imageInput, colorInput].forEach(el => {
+      if (el) el.addEventListener('input', update);
+    });
+
+    if (colorPicker) {
+      colorPicker.addEventListener('input', () => {
+        if (colorInput) {
+          colorInput.value = colorPicker.value;
+          update();
+        }
+      });
+    }
+  })();
+</script>

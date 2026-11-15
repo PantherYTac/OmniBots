@@ -4,6 +4,8 @@
  */
 
 const { checkMessage } = require('../utils/autoModChecker');
+const { handlePrefixCommand } = require('../handlers/commandRouter');
+const { afkStore } = require('../commands/community/afk');
 const { db } = require('../../shared');
 const logger = require('../../shared/utils/logger');
 
@@ -18,9 +20,38 @@ module.exports = {
   async execute(message, client) {
     if (!message.guild || message.author.bot) return;
 
+    // AFK Check 1: If author was AFK, remove status upon sending message
+    const authorAfkKey = `${message.guild.id}_${message.author.id}`;
+    if (afkStore && afkStore.has(authorAfkKey)) {
+      afkStore.delete(authorAfkKey);
+      message.reply({ content: `👋 Welcome back ${message.author}, I have removed your AFK status!` })
+        .then(m => setTimeout(() => m.delete().catch(() => {}), 5000))
+        .catch(() => {});
+    }
+
+    // AFK Check 2: If message mentions an AFK user, notify author
+    if (afkStore && message.mentions.users.size > 0) {
+      for (const [userId, user] of message.mentions.users) {
+        const targetAfkKey = `${message.guild.id}_${userId}`;
+        if (afkStore.has(targetAfkKey)) {
+          const afkData = afkStore.get(targetAfkKey);
+          const minutesAgo = Math.floor((Date.now() - afkData.timestamp) / 60000);
+          const timeStr = minutesAgo > 0 ? `${minutesAgo}m ago` : 'just now';
+          message.reply({ content: `💤 **${user.tag}** is currently AFK: *${afkData.reason}* (${timeStr})` })
+            .then(m => setTimeout(() => m.delete().catch(() => {}), 7000))
+            .catch(() => {});
+          break; // Avoid spamming multiple AFK notices per message
+        }
+      }
+    }
+
     // 1. Run Auto-Moderation Filter
     const wasViolated = await checkMessage(message);
     if (wasViolated) return;
+
+    // 2. Handle Prefix Commands with Unified Dual-Runner
+    const wasCommand = await handlePrefixCommand(message, client);
+    if (wasCommand) return;
 
     const guildSettings = await db.guilds.get(message.guild.id);
 

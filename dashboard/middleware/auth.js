@@ -4,6 +4,7 @@
  */
 
 const logger = require('../../shared/utils/logger');
+const { db } = require('../../shared');
 const { isBotInGuild } = require('./botClient');
 
 let bcrypt = null;
@@ -40,23 +41,16 @@ function initAdminCredentials() {
 
   // 2. Check for fallback plaintext password and auto-hash with SALT_ROUNDS = 12
   const envPlaintext = process.env.ADMIN_PASSWORD;
-  if (envPlaintext && bcrypt) {
+  if (envPlaintext && envPlaintext !== 'change_this_master_password_immediately' && bcrypt) {
     logger.warn('ADMIN_PASSWORD_HASH not found. Auto-hashing fallback ADMIN_PASSWORD with bcrypt (SALT_ROUNDS = 12)...', 'SECURITY');
     cachedAdminHash = bcrypt.hashSync(envPlaintext, 12);
-    logger.info('Fallback password auto-hashed successfully. For production on Hostinger, generate a hash using "npm run generate-hash" and set ADMIN_PASSWORD_HASH directly.', 'SECURITY');
     return;
-  }
-
-  // 3. Emergency secure default if neither is set
-  if (bcrypt) {
-    const emergencyPass = 'admin_' + Math.random().toString(36).substring(2, 10);
-    cachedAdminHash = bcrypt.hashSync(emergencyPass, 12);
-    logger.warn(`No ADMIN_PASSWORD_HASH or ADMIN_PASSWORD set in .env! Temporary emergency password for "${configuredAdminUser}": ${emergencyPass}`, 'SECURITY');
   }
 }
 
 /**
  * Verify Master Admin Credentials
+ * Checks database-stored admin records first, then falls back to .env
  * Uses constant-time comparison (bcrypt.compare) and enforces safe input validation (< 72 bytes)
  */
 async function verifyAdminCredentials(username, password) {
@@ -71,35 +65,79 @@ async function verifyAdminCredentials(username, password) {
     return false;
   }
 
-  // Verify username (case-insensitive check against configured username)
+  if (!bcrypt) {
+    try {
+      bcrypt = require('bcryptjs');
+    } catch {
+      logger.error('bcryptjs is unavailable.', null, 'SECURITY');
+      return false;
+    }
+  }
+
+  // 1. Check Database Admin Account
+  try {
+    const adminRecord = await db.admin.getAdmin(username);
+    if (adminRecord && adminRecord.passwordHash) {
+      return await bcrypt.compare(password, adminRecord.passwordHash);
+    }
+  } catch (err) {
+    logger.error('Error fetching admin record from database', err, 'SECURITY');
+  }
+
+  // 2. Fallback to Environment Variables check
   if (username.trim().toLowerCase() !== configuredAdminUser.toLowerCase()) {
     return false;
   }
 
-  // Verify password using bcrypt.compare (constant-time check)
   if (!cachedAdminHash) {
     initAdminCredentials();
   }
 
-  if (!bcrypt || !cachedAdminHash) {
-    logger.error('Cannot verify password: bcryptjs or cached hash unavailable.', null, 'SECURITY');
-    return false;
+  if (cachedAdminHash) {
+    try {
+      return await bcrypt.compare(password, cachedAdminHash);
+    } catch (err) {
+      logger.error('Error during bcrypt password verification', err, 'SECURITY');
+      return false;
+    }
   }
 
-  try {
-    return await bcrypt.compare(password, cachedAdminHash);
-  } catch (err) {
-    logger.error('Error during bcrypt password verification', err, 'SECURITY');
-    return false;
-  }
+  return false;
 }
 
 /**
  * Global Route Protection Middleware: requireAdminAuth
  * Protects every dashboard page and API endpoint.
+ * Redirects to /setup if no admin exists yet (Zero-Env First-Run Wizard).
  * Unauthenticated users are redirected to /login (or return 401 JSON for /api/*).
  */
-function requireAdminAuth(req, res, next) {
+async function requireAdminAuth(req, res, next) {
+  const hasAdmin = await db.admin.hasAdmin();
+
+  // If no admin account exists yet, force First-Run Setup Wizard
+  if (!hasAdmin) {
+    if (req.path === '/setup' || req.originalUrl.startsWith('/setup')) {
+      return next();
+    }
+    if (req.originalUrl.startsWith('/api/') || req.xhr || req.headers.accept?.includes('application/json')) {
+      return res.status(401).json({
+        success: false,
+        setupRequired: true,
+        error: 'First-Run Setup Required: Please navigate to /setup to initialize master admin credentials.'
+      });
+    }
+    return res.redirect('/setup');
+  }
+
+  // Block /setup once admin exists
+  if (req.path === '/setup' || req.originalUrl === '/setup') {
+    return res.status(403).render('error', {
+      status: 403,
+      message: 'Setup has already been completed. Master administrator account exists.',
+      user: req.session?.user || { username: 'Administrator' }
+    });
+  }
+
   if (req.session && req.session.isAdmin === true) {
     return next();
   }

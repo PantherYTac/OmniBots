@@ -1,19 +1,19 @@
 <nav class="bg-[#131823] border-b border-[#1E2538] sticky top-0 z-50 px-6 py-3">
   <div class="max-w-7xl mx-auto flex items-center justify-between">
     <!-- Brand Logo -->
-    <a href="/dashboard" class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-blurple flex items-center justify-center text-white shadow-lg shadow-blurple/30 font-black text-xl">
-        ⚡
-      </div>
-      <div>
-        <span class="text-white font-bold text-lg tracking-wide">ANTIGRAVITY</span>
-        <span class="text-xs text-blurple bg-blurple/10 border border-blurple/30 px-2 py-0.5 rounded-full ml-1 font-semibold">CONSOLE</span>
-      </div>
+    <a href="/dashboard" class="flex items-center gap-3 group">
+      <img src="/images/logo.svg" alt="OmniBots" class="h-9 w-auto">
     </a>
 
     <!-- Right Profile / Nav items -->
     <div class="flex items-center gap-4">
       <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+        <!-- Multi-Bot Switcher / Manager Link -->
+        <a href="/dashboard/bots" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0B0E14] border border-[#1E2538] hover:border-blurple text-xs font-semibold text-slate-300 hover:text-white transition">
+          <i data-lucide="bot" class="w-4 h-4 text-cyan-accent"></i>
+          <span>Multi-Bot Hub</span>
+        </a>
+
         <a href="/dashboard" class="text-sm text-slate-300 hover:text-white transition flex items-center gap-1.5 font-medium px-3 py-1.5 rounded-lg hover:bg-[#1E2538]">
           <i data-lucide="layout-grid" class="w-4 h-4 text-blurple"></i>
           <span>Servers</span>

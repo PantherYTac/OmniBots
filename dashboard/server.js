@@ -11,6 +11,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
 const { db } = require('../shared');
+const config = require('../shared/config');
 const logger = require('../shared/utils/logger');
 const { initAdminCredentials } = require('./middleware/auth');
 const DatabaseSessionStore = require('./middleware/sessionStore');
@@ -40,8 +41,8 @@ const sessionStore = new DatabaseSessionStore();
 
 app.use(session({
   store: sessionStore,
-  name: 'antigravity_admin_sid',
-  secret: process.env.SESSION_SECRET || 'antigravity_hostinger_master_session_secret_9988!',
+  name: 'omnibots_admin_sid',
+  secret: config.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {

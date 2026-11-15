@@ -27,6 +27,7 @@ function loadCommands(client) {
         const command = require(filePath);
 
         if (command.data && command.execute) {
+          command.module = command.module || category;
           client.commands.set(command.data.name, command);
         } else {
           logger.warn(`Command at ${filePath} is missing data or execute export.`, 'COMMANDS');

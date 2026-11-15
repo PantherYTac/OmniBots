@@ -5,19 +5,15 @@
 
 const logger = require('../../shared/utils/logger');
 const { handleInteraction } = require('../handlers/componentHandler');
+const { handleSlashCommand } = require('../handlers/commandRouter');
 
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction, client) {
     try {
-      // 1. Handle Slash Commands
+      // 1. Handle Slash Commands with Unified Router
       if (interaction.isChatInputCommand()) {
-        const command = client.commands.get(interaction.commandName);
-        if (!command) {
-          return interaction.reply({ content: '❌ Unknown application command.', ephemeral: true });
-        }
-
-        await command.execute(interaction);
+        await handleSlashCommand(interaction, client);
         return;
       }
 

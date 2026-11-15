@@ -1,0 +1,364 @@
+<%- include('partials/head', { title: `${guild.name} • Commands & Permissions` }) %>
+
+<body class="bg-[#0B0E14] text-slate-200 min-h-screen flex flex-col antialiased selection:bg-blurple selection:text-white">
+
+  <%- include('partials/navbar') %>
+
+  <div class="flex-1 flex">
+    <%- include('partials/sidebar', { tab: 'commands', guild }) %>
+
+    <main class="flex-1 p-6 sm:p-10 space-y-8 overflow-y-auto max-w-7xl">
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1E2538] pb-6">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blurple/10 text-blurple border border-blurple/30 mb-2">
+            <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+            <span>Slash (/) & Prefix Dual-Engine</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Commands & Permissions Manager</h1>
+          <p class="text-slate-400 text-sm mt-1">Configure server prefixes, role/channel whitelists, custom aliases, and cooldowns for every command.</p>
+        </div>
+
+        <button 
+          id="save_commands_top_btn"
+          onclick="saveCommandsConfig()" 
+          class="bg-gradient-to-r from-blurple to-indigo-600 hover:from-blurple-hover hover:to-indigo-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl shadow-lg shadow-blurple/25 transition flex items-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>Save Changes</span>
+        </button>
+      </div>
+
+      <!-- Success / Error Alert Box -->
+      <div id="save_alert" class="hidden p-4 rounded-xl text-sm font-semibold flex items-center gap-3"></div>
+
+      <!-- Section 1: Server Prefix Settings Card -->
+      <div class="glass-card p-6 space-y-5 border border-[#1E2538]">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="hash" class="w-5 h-5 text-blurple"></i>
+          <span>Prefix & Mention Routing</span>
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Primary Server Prefix</label>
+            <input 
+              type="text" 
+              id="server_prefix" 
+              value="<%= commandsConfig.prefix || '!' %>" 
+              maxlength="5"
+              placeholder="e.g. !"
+              class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white font-mono text-base font-bold focus:outline-none focus:border-blurple"
+            >
+            <p class="text-[11px] text-slate-500 mt-1">Used for all chat prefix commands (e.g. <code><%= commandsConfig.prefix || '!' %>ban</code>).</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Secondary Prefixes (Comma-Separated)</label>
+            <input 
+              type="text" 
+              id="server_secondary_prefixes" 
+              value="<%= (commandsConfig.secondaryPrefixes || []).join(', ') %>" 
+              placeholder="e.g. ?, ., -"
+              class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-blurple"
+            >
+            <p class="text-[11px] text-slate-500 mt-1">Alternative prefixes accepted alongside primary prefix.</p>
+          </div>
+
+          <div class="flex flex-col justify-center">
+            <label class="flex items-center gap-3 p-3 rounded-xl bg-[#0B0E14] border border-[#1E2538] cursor-pointer hover:border-[#2A344D] transition">
+              <input 
+                type="checkbox" 
+                id="server_mention_prefix" 
+                <%= commandsConfig.allowMentionPrefix !== false ? 'checked' : '' %>
+                class="w-4 h-4 rounded text-blurple focus:ring-0 bg-[#1E2538] border-slate-700"
+              >
+              <div>
+                <div class="text-xs font-bold text-white">Allow @Bot Mention Prefix</div>
+                <div class="text-[11px] text-slate-400">Members can run commands by pinging the bot: <code>@Bot help</code></div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Module Enable/Disable Toggles -->
+      <div class="glass-card p-6 space-y-4 border border-[#1E2538]">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="toggle-left" class="w-5 h-5 text-cyan-accent"></i>
+            <span>Module Switches</span>
+          </h2>
+          <span class="text-xs text-slate-400">Toggle entire command modules on or off for this server</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2" id="module_toggles_container">
+          <% 
+            const moduleKeys = [
+              { key: 'moderation', label: 'Moderation', icon: 'shield' },
+              { key: 'automod', label: 'Auto-Mod', icon: 'shield-alert' },
+              { key: 'logging', label: 'Logging', icon: 'file-text' },
+              { key: 'invites', label: 'Invites Tracker', icon: 'user-plus' },
+              { key: 'reactionRoles', label: 'Reaction Roles', icon: 'mouse-pointer-click' },
+              { key: 'tickets', label: 'Tickets & Modmail', icon: 'ticket' },
+              { key: 'leveling', label: 'Leveling & XP', icon: 'award' },
+              { key: 'economy', label: 'Economy & Games', icon: 'coins' },
+              { key: 'tempVoice', label: 'Temp Voice', icon: 'mic' },
+              { key: 'community', label: 'Community', icon: 'users' },
+              { key: 'automation', label: 'AI & Automation', icon: 'sparkles' }
+            ];
+          %>
+          <% moduleKeys.forEach(m => { %>
+            <label class="flex items-center justify-between p-3 rounded-xl bg-[#0B0E14] border border-[#1E2538] cursor-pointer hover:border-blurple/50 transition">
+              <div class="flex items-center gap-2.5">
+                <i data-lucide="<%= m.icon %>" class="w-4 h-4 text-slate-400"></i>
+                <span class="text-xs font-bold text-white"><%= m.label %></span>
+              </div>
+              <input 
+                type="checkbox" 
+                name="module_toggle" 
+                data-module="<%= m.key %>"
+                <%= commandsConfig.modules && commandsConfig.modules[m.key] === false ? '' : 'checked' %>
+                class="w-4 h-4 rounded text-blurple focus:ring-0 bg-[#1E2538] border-slate-700"
+              >
+            </label>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Section 3: Commands Customization Table -->
+      <div class="glass-card p-6 space-y-5 border border-[#1E2538]">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="sliders" class="w-5 h-5 text-blurple"></i>
+              <span>Universal Command Registry</span>
+            </h2>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#0B0E14] text-slate-400 border border-[#1E2538]">
+              <%= commandsList.length %> Commands
+            </span>
+          </div>
+
+          <!-- Search & Filter Controls -->
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+              <input 
+                type="text" 
+                id="cmd_search" 
+                placeholder="Search commands..." 
+                oninput="filterCommandsTable()"
+                class="bg-[#0B0E14] border border-[#1E2538] rounded-xl pl-9 pr-4 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blurple w-48 sm:w-60"
+              >
+            </div>
+
+            <select 
+              id="cmd_module_filter" 
+              onchange="filterCommandsTable()"
+              class="bg-[#0B0E14] border border-[#1E2538] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blurple"
+            >
+              <option value="all">All Modules</option>
+              <% moduleKeys.forEach(m => { %>
+                <option value="<%= m.key %>"><%= m.label %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto rounded-xl border border-[#1E2538]">
+          <table class="w-full text-left text-xs" id="commands_table">
+            <thead class="bg-[#0B0E14] text-slate-400 uppercase tracking-wider font-semibold border-b border-[#1E2538]">
+              <tr>
+                <th class="p-3.5">Status</th>
+                <th class="p-3.5">Command</th>
+                <th class="p-3.5">Module</th>
+                <th class="p-3.5">Aliases</th>
+                <th class="p-3.5">Cooldown</th>
+                <th class="p-3.5">Delete Trigger</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#1E2538] text-slate-300">
+              <% commandsList.forEach(cmd => { 
+                const cmdCfg = (commandsConfig.commands && commandsConfig.commands[cmd.name]) || {};
+                const isEnabled = cmdCfg.enabled !== false;
+                const aliasesVal = Array.isArray(cmdCfg.aliases) ? cmdCfg.aliases.join(', ') : (cmd.aliases ? cmd.aliases.join(', ') : '');
+                const cooldownVal = cmdCfg.cooldown !== undefined ? cmdCfg.cooldown : (cmd.cooldown || 3);
+                const deleteTriggerVal = Boolean(cmdCfg.deleteTrigger);
+              %>
+                <tr class="hover:bg-[#131823]/80 transition cmd-row" data-name="<%= cmd.name %>" data-module="<%= cmd.module || 'general' %>">
+                  <!-- Enabled Switch -->
+                  <td class="p-3.5">
+                    <input 
+                      type="checkbox" 
+                      id="cmd_enable_<%= cmd.name %>"
+                      <%= isEnabled ? 'checked' : '' %>
+                      class="w-4 h-4 rounded text-blurple focus:ring-0 bg-[#0B0E14] border-slate-700"
+                    >
+                  </td>
+
+                  <!-- Name & Description -->
+                  <td class="p-3.5 font-medium">
+                    <div class="font-bold text-white flex items-center gap-1.5 font-mono">
+                      <span class="text-blurple">/</span><span><%= cmd.name %></span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 max-w-xs truncate"><%= cmd.description %></div>
+                  </td>
+
+                  <!-- Module -->
+                  <td class="p-3.5">
+                    <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#0B0E14] text-cyan-accent border border-cyan-accent/20">
+                      <%= cmd.module || 'general' %>
+                    </span>
+                  </td>
+
+                  <!-- Custom Aliases -->
+                  <td class="p-3.5">
+                    <input 
+                      type="text" 
+                      id="cmd_aliases_<%= cmd.name %>" 
+                      value="<%= aliasesVal %>"
+                      placeholder="e.g. b, banish"
+                      class="bg-[#0B0E14] border border-[#1E2538] rounded-lg px-2.5 py-1 text-white text-xs w-36 font-mono focus:outline-none focus:border-blurple"
+                    >
+                  </td>
+
+                  <!-- Cooldown -->
+                  <td class="p-3.5">
+                    <div class="flex items-center gap-1">
+                      <input 
+                        type="number" 
+                        id="cmd_cooldown_<%= cmd.name %>" 
+                        value="<%= cooldownVal %>"
+                        min="0"
+                        max="300"
+                        class="bg-[#0B0E14] border border-[#1E2538] rounded-lg px-2 py-1 text-white text-xs w-16 font-mono focus:outline-none focus:border-blurple"
+                      >
+                      <span class="text-slate-500 text-[11px]">sec</span>
+                    </div>
+                  </td>
+
+                  <!-- Delete Trigger -->
+                  <td class="p-3.5">
+                    <input 
+                      type="checkbox" 
+                      id="cmd_deltrigger_<%= cmd.name %>"
+                      <%= deleteTriggerVal ? 'checked' : '' %>
+                      class="w-4 h-4 rounded text-blurple focus:ring-0 bg-[#0B0E14] border-slate-700"
+                      title="Automatically delete member prefix trigger message"
+                    >
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Bottom Save Action -->
+      <div class="flex justify-end">
+        <button 
+          onclick="saveCommandsConfig()" 
+          class="bg-gradient-to-r from-blurple to-indigo-600 hover:from-blurple-hover hover:to-indigo-500 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg shadow-blurple/25 transition flex items-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>Save Commands & Permissions Configuration</span>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    function filterCommandsTable() {
+      const search = (document.getElementById('cmd_search').value || '').toLowerCase().trim();
+      const moduleFilter = document.getElementById('cmd_module_filter').value;
+      const rows = document.querySelectorAll('.cmd-row');
+
+      rows.forEach(r => {
+        const name = r.getAttribute('data-name').toLowerCase();
+        const mod = r.getAttribute('data-module');
+
+        const matchesSearch = !search || name.includes(search);
+        const matchesModule = moduleFilter === 'all' || mod === moduleFilter;
+
+        r.style.display = (matchesSearch && matchesModule) ? '' : 'none';
+      });
+    }
+
+    async function saveCommandsConfig() {
+      const alertBox = document.getElementById('save_alert');
+      const topBtn = document.getElementById('save_commands_top_btn');
+
+      const prefix = document.getElementById('server_prefix').value.trim() || '!';
+      const secondaryRaw = document.getElementById('server_secondary_prefixes').value;
+      const secondaryPrefixes = secondaryRaw.split(',').map(s => s.trim()).filter(Boolean);
+      const allowMentionPrefix = document.getElementById('server_mention_prefix').checked;
+
+      // Collect module switches
+      const modules = {};
+      document.querySelectorAll('#module_toggles_container input[type="checkbox"]').forEach(cb => {
+        const key = cb.getAttribute('data-module');
+        modules[key] = cb.checked;
+      });
+
+      // Collect commands config
+      const commands = {};
+      document.querySelectorAll('.cmd-row').forEach(row => {
+        const cmdName = row.getAttribute('data-name');
+        const enabled = document.getElementById(`cmd_enable_${cmdName}`).checked;
+        const aliasesRaw = document.getElementById(`cmd_aliases_${cmdName}`).value;
+        const aliases = aliasesRaw.split(',').map(a => a.trim()).filter(Boolean);
+        const cooldown = parseInt(document.getElementById(`cmd_cooldown_${cmdName}`).value, 10) || 0;
+        const deleteTrigger = document.getElementById(`cmd_deltrigger_${cmdName}`).checked;
+
+        commands[cmdName] = {
+          enabled,
+          aliases,
+          cooldown,
+          deleteTrigger
+        };
+      });
+
+      topBtn.disabled = true;
+      topBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Saving...</span>';
+      if (window.lucide) window.lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/guilds/<%= guild.id %>/commands-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prefix,
+            secondaryPrefixes,
+            allowMentionPrefix,
+            modules,
+            commands
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alertBox.className = 'p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-semibold flex items-center gap-3 animate-fade-in';
+          alertBox.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0"></i><span>' + (data.message || 'Settings saved successfully!') + '</span>';
+          alertBox.classList.remove('hidden');
+          setTimeout(() => alertBox.classList.add('hidden'), 5000);
+        } else {
+          alertBox.className = 'p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold flex items-center gap-3 animate-fade-in';
+          alertBox.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i><span>' + (data.error || 'Failed to save configuration.') + '</span>';
+          alertBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        alertBox.className = 'p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold flex items-center gap-3 animate-fade-in';
+        alertBox.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i><span>Network error while saving. Please try again.</span>';
+        alertBox.classList.remove('hidden');
+      } finally {
+        topBtn.disabled = false;
+        topBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i><span>Save Changes</span>';
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }
+  </script>
+</body>
+</html>

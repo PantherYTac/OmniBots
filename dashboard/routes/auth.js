@@ -9,10 +9,90 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
+const bcrypt = require('bcryptjs');
+const { db } = require('../../shared');
 const { verifyAdminCredentials, requireAdminAuth } = require('../middleware/auth');
 const logger = require('../../shared/utils/logger');
 
 const DISCORD_API_ENDPOINT = 'https://discord.com/api/v10';
+
+// 0. Zero-Env First-Run Setup Wizard Routes (/setup)
+router.get('/setup', async (req, res) => {
+  const hasAdmin = await db.admin.hasAdmin();
+  if (hasAdmin) {
+    return res.redirect('/login?notice=Master+admin+already+configured');
+  }
+
+  const error = req.query.error ? String(req.query.error) : null;
+  res.render('setup', { error });
+});
+
+router.post('/setup', async (req, res) => {
+  const hasAdmin = await db.admin.hasAdmin();
+  if (hasAdmin) {
+    return res.status(403).render('error', {
+      status: 403,
+      message: 'Setup has already been completed. Master administrator account exists.',
+      user: { username: 'Administrator' }
+    });
+  }
+
+  const username = (req.body.username || '').trim();
+  const password = req.body.password || '';
+  const confirmPassword = req.body.confirmPassword || '';
+
+  if (!username || !password || !confirmPassword) {
+    return res.status(400).render('setup', {
+      error: 'All fields are required.'
+    });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).render('setup', {
+      error: 'Password must be at least 8 characters long.'
+    });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).render('setup', {
+      error: 'Passwords do not match. Please re-enter.'
+    });
+  }
+
+  if (Buffer.byteLength(password, 'utf8') > 72) {
+    return res.status(400).render('setup', {
+      error: 'Password exceeds maximum allowable security limit of 72 bytes.'
+    });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 12);
+    await db.admin.createAdmin(username, passwordHash);
+    logger.success(`Master administrator account created for user "${username}" during first-run setup.`, 'SETUP_WIZARD');
+
+    req.session.regenerate((err) => {
+      if (err) {
+        logger.error('Session regeneration error after setup', err, 'SETUP');
+        return res.redirect('/login?notice=Account+created+successfully.+Please+log+in.');
+      }
+
+      req.session.isAdmin = true;
+      req.session.username = username;
+      req.session.user = {
+        id: 'master_admin',
+        username: username,
+        global_name: 'Master Administrator'
+      };
+
+      return res.redirect('/dashboard/bots?notice=Welcome+to+OmniBots!+Add+your+first+bot+below.');
+    });
+  } catch (err) {
+    logger.error('Failed to create master admin during setup', err, 'SETUP_WIZARD');
+    return res.status(500).render('setup', {
+      error: 'Failed to save master admin account. Please try again.'
+    });
+  }
+});
 
 // Brute-force protection: Max 5 failed login attempts per 15 minutes per IP
 const loginRateLimiter = rateLimit({
@@ -30,7 +110,12 @@ const loginRateLimiter = rateLimit({
 });
 
 // 1. GET /login — Render Dark-Mode Admin Login Gate
-router.get('/login', (req, res) => {
+router.get('/login', async (req, res) => {
+  const hasAdmin = await db.admin.hasAdmin();
+  if (!hasAdmin) {
+    return res.redirect('/setup');
+  }
+
   if (req.session && req.session.isAdmin === true) {
     return res.redirect('/dashboard');
   }

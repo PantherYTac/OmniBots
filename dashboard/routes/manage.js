@@ -13,6 +13,52 @@ const {
   getGuildDetails,
   getInProcessClient
 } = require('../middleware/botClient');
+const { botManager } = require('../../bot/BotManager');
+
+// 0.0 Multi-Bot Fleet Hub
+router.get('/bots', requireAdminAuth, async (req, res) => {
+  const bots = await botManager.listBots();
+  res.render('bots', {
+    user: req.session.user,
+    bots,
+    notice: req.query.notice ? String(req.query.notice) : null,
+    error: req.query.error ? String(req.query.error) : null,
+    tab: 'bots'
+  });
+});
+
+// 0.01 Commands & Permissions Customization Manager
+router.get('/:guildId/commands', requireAdminAuth, canManageGuild, async (req, res) => {
+  const guildId = req.params.guildId;
+  const commandsConfig = await db.commandsConfig.get(guildId);
+  const channels = await getGuildChannels(guildId);
+  const roles = await getGuildRoles(guildId);
+
+  const commandsList = [];
+  for (const cmd of botManager.commands.values()) {
+    if (cmd.data && cmd.data.name) {
+      commandsList.push({
+        name: cmd.data.name,
+        description: cmd.data.description || 'Universal application command',
+        module: cmd.module || 'general',
+        aliases: cmd.aliases || [],
+        cooldown: cmd.cooldown || 3
+      });
+    }
+  }
+
+  commandsList.sort((a, b) => (a.module || '').localeCompare(b.module || '') || a.name.localeCompare(b.name));
+
+  res.render('commands-manager', {
+    user: req.session.user,
+    guild: req.guild,
+    commandsConfig,
+    commandsList,
+    channels,
+    roles,
+    tab: 'commands'
+  });
+});
 
 // 0. Global Bot Presence & Custom Status Manager
 router.get('/presence', requireAdminAuth, async (req, res) => {

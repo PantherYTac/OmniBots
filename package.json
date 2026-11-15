@@ -1,10 +1,11 @@
 {
-  "name": "discord-bot-dashboard",
-  "version": "1.0.0",
-  "description": "Production-ready, all-in-one Discord.js v14 Bot with a modern Express.js + Tailwind CSS Web Dashboard for Hostinger Node.js hosting",
+  "name": "omnibots",
+  "version": "2.0.0",
+  "description": "OmniBots - Open-Source, Self-Hostable All-in-One Multi-Bot Discord Management Panel & Bot Engine (discord.js v14 + Express.js)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "test": "node test/e2e-omnibots.js",
     "start:dashboard": "node dashboard/server.js",
     "start:bot": "node bot/index.js",
     "start:all": "node index.js",
