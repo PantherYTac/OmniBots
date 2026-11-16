@@ -1,16 +1,16 @@
 /**
  * Discord Verification-Compliant Legal Document Templates
- * Pre-written, legally thorough, and specifically tailored to Antigravity Discord Bot
+ * Pre-written, legally thorough, and specifically tailored to OmniBots
  * Covering privileged gateway intents, sub-processors, zero data selling, and user deletion rights.
  */
 
 function getDefaultPrivacyPolicy(contactEmail = 'support@yourdomain.com', supportServer = 'https://discord.gg/yourserver') {
-  return `# Privacy Policy for Antigravity Discord Bot
+  return `# Privacy Policy for OmniBots
 
 **Effective Date:** January 1, 2025  
 **Last Updated:** November 15, 2026  
 
-Welcome to **Antigravity Discord Bot** ("we," "our," or "us"). We are committed to protecting your privacy and handling your data with transparency, integrity, and strict adherence to the **Discord Developer Terms of Service**, the **Discord Developer Policy**, and international data protection regulations (including GDPR and CCPA).
+Welcome to **OmniBots** ("we," "our," or "us"). We are committed to protecting your privacy and handling your data with transparency, integrity, and strict adherence to the **Discord Developer Terms of Service**, the **Discord Developer Policy**, and international data protection regulations (including GDPR and CCPA).
 
 This Privacy Policy explains what information we collect, how it is used, how it is stored and protected, and your rights to access or permanently delete your data.
 
@@ -116,12 +116,12 @@ If you have questions, concerns, or inquiries regarding this Privacy Policy or o
 }
 
 function getDefaultTermsOfService(contactEmail = 'support@yourdomain.com', supportServer = 'https://discord.gg/yourserver') {
-  return `# Terms of Service for Antigravity Discord Bot
+  return `# Terms of Service for OmniBots
 
 **Effective Date:** January 1, 2025  
 **Last Updated:** November 15, 2026  
 
-Please read these Terms of Service ("Terms") carefully before adding **Antigravity Discord Bot** ("the Bot") to your Discord server or utilizing its associated Web Dashboard and slash commands.
+Please read these Terms of Service ("Terms") carefully before adding **OmniBots** ("the Bot") to your Discord server or utilizing its associated Web Dashboard and slash commands.
 
 By inviting the Bot, accessing the dashboard, or interacting with any Bot features, you agree to be bound by these Terms and our [Privacy Policy](/privacy). If you do not agree to these Terms, you must immediately remove the Bot from your server and discontinue all use.
 

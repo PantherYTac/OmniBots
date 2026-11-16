@@ -45,7 +45,11 @@ let memoryStore = {
   adminUsers: {},
   managedBots: {},
   commandsConfig: {},
-  modCases: []
+  modCases: [],
+  ticketPanels: {},
+  ticketCategories: {},
+  applicationForms: {},
+  applicationSubmissions: []
 };
 
 // Ensure data directory exists
@@ -119,7 +123,8 @@ function createDefaultGuildSettings(guildId) {
       counting: true,
       birthdays: true,
       aiChat: true,
-      inviteTracker: true
+      inviteTracker: true,
+      applications: true
     },
     automod: {
       antiInvites: true,
@@ -233,7 +238,22 @@ function createDefaultGuildSettings(guildId) {
       enabled: true,
       minAccountAgeDays: 7,
       subtractLeaves: true,
-      rewards: []
+      rewards: [],
+      joinChannelId: '',
+      joinCardEnabled: true,
+      joinAccentColor: '#5865F2',
+      joinGradientStart: '#0B0E14',
+      joinGradientEnd: '#131823',
+      joinEmbed: {
+        author: 'New Member Arrived!',
+        description: 'Welcome {user} (**{user.tag}**) to **{server}**!\n\n📨 **Invited by:** {inviter} (**{inviter.tag}**)\n🏆 **Inviter Total:** **{inviter.invites}** invites (`{invite.code}`)\n👥 **Member Count:** #{member_count}',
+        color: '#5865F2'
+      },
+      leaveChannelId: '',
+      leaveEmbed: {
+        description: '**{user.tag}** has left the server.\nInvited by **{inviter.tag}** — they now have **{inviter.invites}** invites.',
+        color: '#EF4444'
+      }
     }
   };
 }
@@ -595,15 +615,35 @@ const db = {
   // 7. Support Tickets & Transcripts
   tickets: {
     async create(ticket) {
+      const ticketId = ticket.ticketId || ticket.id || `ticket-${Date.now()}`;
       const entry = {
-        id: ticket.id || `ticket-${Date.now()}`,
-        status: 'open',
-        createdAt: Date.now(),
-        ...ticket
+        id: ticketId,
+        ticketId,
+        botId: ticket.botId || 'primary',
+        guildId: ticket.guildId,
+        categoryId: ticket.categoryId || ticket.category || 'general',
+        channelId: ticket.channelId,
+        openerId: ticket.openerId || ticket.userId,
+        openerTag: ticket.openerTag || ticket.userName || 'Unknown#0000',
+        userId: ticket.openerId || ticket.userId,
+        userName: ticket.openerTag || ticket.userName || 'Unknown#0000',
+        claimedBy: ticket.claimedBy || null,
+        claimedByTag: ticket.claimedByTag || null,
+        status: ticket.status || 'open',
+        answersJson: ticket.answersJson || [],
+        htmlTranscript: ticket.htmlTranscript || ticket.transcriptHtml || null,
+        transcriptHtml: ticket.htmlTranscript || ticket.transcriptHtml || null,
+        locked: Boolean(ticket.locked),
+        closeReason: ticket.closeReason || null,
+        closedBy: ticket.closedBy || null,
+        closedByTag: ticket.closedByTag || null,
+        createdAt: ticket.createdAt || Date.now(),
+        closedAt: ticket.closedAt || null
       };
       if (dbDriver === 'postgres' && pgPool) {
         await pgPool.query('INSERT INTO shared_collections (collection_name, doc_id, data) VALUES ($1, $2, $3)', ['tickets', entry.id, entry]);
       } else {
+        if (!Array.isArray(memoryStore.tickets)) memoryStore.tickets = [];
         memoryStore.tickets.push(entry);
         saveLocalStore();
       }
@@ -612,10 +652,10 @@ const db = {
 
     async get(ticketId) {
       if (dbDriver === 'postgres' && pgPool) {
-        const res = await pgPool.query('SELECT data FROM shared_collections WHERE collection_name = $1 AND doc_id = $2', ['tickets', ticketId]);
+        const res = await pgPool.query('SELECT data FROM shared_collections WHERE collection_name = $1 AND (doc_id = $2 OR data->>\'ticketId\' = $2)', ['tickets', ticketId]);
         return res.rows.length > 0 ? res.rows[0].data : null;
       }
-      return memoryStore.tickets.find(t => t.id === ticketId) || null;
+      return (memoryStore.tickets || []).find(t => t.id === ticketId || t.ticketId === ticketId) || null;
     },
 
     async getByChannel(channelId) {
@@ -623,31 +663,517 @@ const db = {
         const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'tickets' AND data->>'channelId' = $1", [channelId]);
         return res.rows.length > 0 ? res.rows[0].data : null;
       }
-      return memoryStore.tickets.find(t => t.channelId === channelId) || null;
+      return (memoryStore.tickets || []).find(t => t.channelId === channelId) || null;
     },
 
     async update(ticketId, updateData) {
       const current = await this.get(ticketId);
       if (!current) return null;
-      const updated = { ...current, ...updateData };
+      const updated = {
+        ...current,
+        ...updateData,
+        htmlTranscript: updateData.htmlTranscript || updateData.transcriptHtml || current.htmlTranscript,
+        transcriptHtml: updateData.htmlTranscript || updateData.transcriptHtml || current.transcriptHtml
+      };
       if (dbDriver === 'postgres' && pgPool) {
-        await pgPool.query('UPDATE shared_collections SET data = $1 WHERE collection_name = $2 AND doc_id = $3', [updated, 'tickets', ticketId]);
+        await pgPool.query('UPDATE shared_collections SET data = $1 WHERE collection_name = $2 AND (doc_id = $3 OR data->>\'ticketId\' = $3)', [updated, 'tickets', ticketId]);
       } else {
-        const idx = memoryStore.tickets.findIndex(t => t.id === ticketId);
+        const idx = (memoryStore.tickets || []).findIndex(t => t.id === ticketId || t.ticketId === ticketId);
         if (idx >= 0) memoryStore.tickets[idx] = updated;
         saveLocalStore();
       }
       return updated;
     },
 
-    async list(guildId) {
+    async list(guildId, botId = null) {
       if (dbDriver === 'postgres' && pgPool) {
-        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'tickets' AND data->>'guildId' = $1 ORDER BY (data->>'createdAt')::bigint DESC", [guildId]);
+        let q = "SELECT data FROM shared_collections WHERE collection_name = 'tickets' AND data->>'guildId' = $1";
+        const params = [guildId];
+        if (botId) {
+          q += " AND (data->>'botId' = $2 OR data->>'botId' IS NULL)";
+          params.push(botId);
+        }
+        q += " ORDER BY (data->>'createdAt')::bigint DESC";
+        const res = await pgPool.query(q, params);
         return res.rows.map(r => r.data);
       }
-      return memoryStore.tickets
-        .filter(t => t.guildId === guildId)
+      return (memoryStore.tickets || [])
+        .filter(t => t.guildId === guildId && (!botId || !t.botId || t.botId === botId))
         .sort((a, b) => b.createdAt - a.createdAt);
+    },
+
+    async delete(ticketId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("DELETE FROM shared_collections WHERE collection_name = 'tickets' AND (doc_id = $1 OR data->>'ticketId' = $1)", [ticketId]);
+      } else {
+        if (Array.isArray(memoryStore.tickets)) {
+          memoryStore.tickets = memoryStore.tickets.filter(t => t.id !== ticketId && t.ticketId !== ticketId);
+          saveLocalStore();
+        }
+      }
+      return true;
+    }
+  },
+
+  // 7b. Ticket Panels (Multi-Category Studio)
+  ticketPanels: {
+    async list(guildId, botId = null) {
+      if (dbDriver === 'postgres' && pgPool) {
+        let query = "SELECT data FROM shared_collections WHERE collection_name = 'ticketPanels' AND data->>'guildId' = $1";
+        const params = [guildId];
+        if (botId) {
+          query += " AND (data->>'botId' = $2 OR data->>'botId' IS NULL)";
+          params.push(botId);
+        }
+        const res = await pgPool.query(query, params);
+        return res.rows.map(r => r.data);
+      }
+      return Object.values(memoryStore.ticketPanels || {})
+        .filter(p => p.guildId === guildId && (!botId || !p.botId || p.botId === botId));
+    },
+
+    async get(panelId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'ticketPanels' AND doc_id = $1", [panelId]);
+        return res.rows.length > 0 ? res.rows[0].data : null;
+      }
+      return memoryStore.ticketPanels?.[panelId] || null;
+    },
+
+    async save(panelId, data) {
+      const existing = (await this.get(panelId)) || {};
+      const entry = {
+        id: panelId,
+        botId: data.botId || existing.botId || 'primary',
+        guildId: data.guildId || existing.guildId,
+        channelId: data.channelId || existing.channelId || '',
+        messageId: data.messageId || existing.messageId || null,
+        selectorStyle: data.selectorStyle || existing.selectorStyle || 'buttons',
+        panelEmbed: data.panelEmbed || existing.panelEmbed || {
+          title: '🎫 Server Support Desk',
+          description: 'Need assistance, have questions, or need to report an incident?\nSelect a department below to open a private ticket with our support staff.',
+          color: '#5865F2',
+          footer: 'Tickets are private and handled securely'
+        },
+        categoryIds: Array.isArray(data.categoryIds) ? data.categoryIds : (existing.categoryIds || []),
+        createdAt: existing.createdAt || Date.now(),
+        updatedAt: Date.now()
+      };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query(`
+          INSERT INTO shared_collections (collection_name, doc_id, data, updated_at)
+          VALUES ('ticketPanels', $1, $2, NOW())
+          ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $2, updated_at = NOW()
+        `, [panelId, entry]);
+      } else {
+        if (!memoryStore.ticketPanels) memoryStore.ticketPanels = {};
+        memoryStore.ticketPanels[panelId] = entry;
+        saveLocalStore();
+      }
+      return entry;
+    },
+
+    async delete(panelId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("DELETE FROM shared_collections WHERE collection_name = 'ticketPanels' AND doc_id = $1", [panelId]);
+      } else {
+        if (memoryStore.ticketPanels) delete memoryStore.ticketPanels[panelId];
+        saveLocalStore();
+      }
+      return true;
+    }
+  },
+
+  // 7c. Ticket Categories
+  ticketCategories: {
+    async list(guildId, botId = null) {
+      if (dbDriver === 'postgres' && pgPool) {
+        let query = "SELECT data FROM shared_collections WHERE collection_name = 'ticketCategories' AND data->>'guildId' = $1";
+        const params = [guildId];
+        if (botId) {
+          query += " AND (data->>'botId' = $2 OR data->>'botId' IS NULL)";
+          params.push(botId);
+        }
+        const res = await pgPool.query(query, params);
+        if (res.rows.length > 0) return res.rows.map(r => r.data);
+      }
+      const list = Object.values(memoryStore.ticketCategories || {})
+        .filter(c => c.guildId === guildId && (!botId || !c.botId || c.botId === botId));
+      
+      if (list.length === 0) {
+        const defaults = [
+          {
+            id: `cat_general_${guildId}`,
+            botId: botId || 'primary',
+            guildId,
+            name: 'General Support',
+            emoji: '🎫',
+            description: 'General server questions, help, and assistance',
+            buttonColor: 'Primary',
+            discordCategoryId: '',
+            closedCategoryId: '',
+            channelNamePattern: 'ticket-{category}-{username}-{count}',
+            supportRoleIds: [],
+            modalQuestions: [
+              { id: 'reason', label: 'What do you need assistance with?', placeholder: 'Describe your issue in detail', style: 'paragraph', required: true }
+            ],
+            welcomeEmbed: {
+              title: '🎫 Support Ticket Opened',
+              description: 'Hello {user}! Thank you for opening a ticket. A staff member will be with you shortly.\nPlease review your answers below and provide any additional details.',
+              color: '#5865F2'
+            },
+            maxOpenPerUser: 1,
+            autoCloseInactiveHours: 0,
+            createdAt: Date.now()
+          },
+          {
+            id: `cat_billing_${guildId}`,
+            botId: botId || 'primary',
+            guildId,
+            name: 'Billing & Shop',
+            emoji: '💳',
+            description: 'Help with server shop, donations, or economy transactions',
+            buttonColor: 'Success',
+            discordCategoryId: '',
+            closedCategoryId: '',
+            channelNamePattern: 'ticket-billing-{username}',
+            supportRoleIds: [],
+            modalQuestions: [
+              { id: 'txn_id', label: 'Transaction / Order ID (if applicable)', placeholder: 'e.g. TXN-123456', style: 'short', required: false },
+              { id: 'details', label: 'Please explain your purchase or payment query', placeholder: 'Provide order email or details', style: 'paragraph', required: true }
+            ],
+            welcomeEmbed: {
+              title: '💳 Billing & Transactions Support',
+              description: 'Hello {user}! Our billing coordinators will review your transaction details shortly.',
+              color: '#57F287'
+            },
+            maxOpenPerUser: 1,
+            autoCloseInactiveHours: 0,
+            createdAt: Date.now()
+          },
+          {
+            id: `cat_report_${guildId}`,
+            botId: botId || 'primary',
+            guildId,
+            name: 'Player & Rule Report',
+            emoji: '🚨',
+            description: 'Report rule violations, harassment, or exploiters',
+            buttonColor: 'Danger',
+            discordCategoryId: '',
+            closedCategoryId: '',
+            channelNamePattern: 'report-{username}',
+            supportRoleIds: [],
+            modalQuestions: [
+              { id: 'reported_user', label: 'User(s) being reported', placeholder: 'Username, tag, or User ID', style: 'short', required: true },
+              { id: 'incident', label: 'Description of incident & proof links', placeholder: 'Explain what happened and paste links to screenshots/video', style: 'paragraph', required: true }
+            ],
+            welcomeEmbed: {
+              title: '🚨 Incident Report',
+              description: 'Hello {user}! Our moderation team has been alerted to this report. Please remain patient while staff reviews your evidence.',
+              color: '#ED4245'
+            },
+            maxOpenPerUser: 2,
+            autoCloseInactiveHours: 0,
+            createdAt: Date.now()
+          }
+        ];
+        return defaults;
+      }
+      return list;
+    },
+
+    async get(categoryId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'ticketCategories' AND doc_id = $1", [categoryId]);
+        return res.rows.length > 0 ? res.rows[0].data : null;
+      }
+      return memoryStore.ticketCategories?.[categoryId] || null;
+    },
+
+    async save(categoryId, data) {
+      const existing = (await this.get(categoryId)) || {};
+      const entry = {
+        id: categoryId,
+        botId: data.botId || existing.botId || 'primary',
+        guildId: data.guildId || existing.guildId,
+        name: data.name || existing.name || 'New Category',
+        emoji: data.emoji !== undefined ? data.emoji : (existing.emoji || '🎫'),
+        description: data.description !== undefined ? data.description : (existing.description || ''),
+        buttonColor: data.buttonColor || existing.buttonColor || 'Primary',
+        discordCategoryId: data.discordCategoryId || existing.discordCategoryId || '',
+        closedCategoryId: data.closedCategoryId || existing.closedCategoryId || '',
+        channelNamePattern: data.channelNamePattern || existing.channelNamePattern || 'ticket-{category}-{username}-{count}',
+        supportRoleIds: Array.isArray(data.supportRoleIds) ? data.supportRoleIds : (existing.supportRoleIds || []),
+        modalQuestions: Array.isArray(data.modalQuestions) ? data.modalQuestions : (existing.modalQuestions || []),
+        welcomeEmbed: data.welcomeEmbed || existing.welcomeEmbed || {
+          title: '🎫 Support Ticket Opened',
+          description: 'Hello {user}! Thank you for reaching out. Support will be with you shortly.',
+          color: '#5865F2'
+        },
+        maxOpenPerUser: parseInt(data.maxOpenPerUser, 10) || existing.maxOpenPerUser || 1,
+        autoCloseInactiveHours: parseInt(data.autoCloseInactiveHours, 10) || 0,
+        createdAt: existing.createdAt || Date.now(),
+        updatedAt: Date.now()
+      };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query(`
+          INSERT INTO shared_collections (collection_name, doc_id, data, updated_at)
+          VALUES ('ticketCategories', $1, $2, NOW())
+          ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $2, updated_at = NOW()
+        `, [categoryId, entry]);
+      } else {
+        if (!memoryStore.ticketCategories) memoryStore.ticketCategories = {};
+        memoryStore.ticketCategories[categoryId] = entry;
+        saveLocalStore();
+      }
+      return entry;
+    },
+
+    async delete(categoryId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("DELETE FROM shared_collections WHERE collection_name = 'ticketCategories' AND doc_id = $1", [categoryId]);
+      } else {
+        if (memoryStore.ticketCategories) delete memoryStore.ticketCategories[categoryId];
+        saveLocalStore();
+      }
+      return true;
+    }
+  },
+
+  // 7d. Staff & Community Application Forms
+  applicationForms: {
+    async list(guildId, botId = null) {
+      if (dbDriver === 'postgres' && pgPool) {
+        let query = "SELECT data FROM shared_collections WHERE collection_name = 'applicationForms' AND data->>'guildId' = $1";
+        const params = [guildId];
+        if (botId) {
+          query += " AND (data->>'botId' = $2 OR data->>'botId' IS NULL)";
+          params.push(botId);
+        }
+        const res = await pgPool.query(query, params);
+        if (res.rows.length > 0) return res.rows.map(r => r.data);
+      }
+      const list = Object.values(memoryStore.applicationForms || {})
+        .filter(f => f.guildId === guildId && (!botId || !f.botId || f.botId === botId));
+
+      if (list.length === 0) {
+        const defaultForm = {
+          id: `app_mod_${guildId}`,
+          formId: `app_mod_${guildId}`,
+          botId: botId || 'primary',
+          guildId,
+          name: 'Staff Moderator Application',
+          description: 'Apply to join our moderation and community support team!',
+          isOpen: true,
+          panelEmbed: {
+            title: '🛡️ Server Staff Applications',
+            description: 'We are recruiting passionate, mature, and dedicated community moderators!\nClick the **Apply Now** button below to complete your staff application.',
+            color: '#5865F2',
+            bannerUrl: '',
+            buttonText: 'Apply for Staff'
+          },
+          panelChannelId: '',
+          panelMessageId: null,
+          reviewChannelId: '',
+          questions: [
+            { id: 'q1', prompt: 'What is your age and timezone?', type: 'short', options: [] },
+            { id: 'q2', prompt: 'Why do you want to become a moderator on this server?', type: 'paragraph', options: [] },
+            { id: 'q3', prompt: 'What previous staff or moderation experience do you have?', type: 'paragraph', options: [] },
+            { id: 'q4', prompt: 'How many hours per week can you actively dedicate to the server?', type: 'short', options: [] },
+            { id: 'q5', prompt: 'How would you handle a member who is being toxic and harassing others?', type: 'paragraph', options: [] }
+          ],
+          requiredRoleIds: [],
+          blockedRoleIds: [],
+          minAccountAgeDays: 14,
+          minServerDays: 3,
+          reapplyCooldownHours: 72,
+          acceptRoleIds: [],
+          removeRoleIds: [],
+          acceptDmEmbed: {
+            title: '🎉 Congratulations! Your Application Was Accepted',
+            description: 'We are thrilled to welcome you to our staff team! Please check the staff channels for your onboarding steps.',
+            color: '#57F287'
+          },
+          denyDmEmbed: {
+            title: 'Application Update',
+            description: 'Thank you for your interest in joining our staff team. Unfortunately, your application has not been accepted at this time.\nYou may re-apply once your cooldown expires.',
+            color: '#ED4245'
+          },
+          createdAt: Date.now()
+        };
+        return [defaultForm];
+      }
+      return list;
+    },
+
+    async get(formId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'applicationForms' AND doc_id = $1", [formId]);
+        return res.rows.length > 0 ? res.rows[0].data : null;
+      }
+      return memoryStore.applicationForms?.[formId] || null;
+    },
+
+    async save(formId, data) {
+      const existing = (await this.get(formId)) || {};
+      const entry = {
+        id: formId,
+        formId,
+        botId: data.botId || existing.botId || 'primary',
+        guildId: data.guildId || existing.guildId,
+        name: data.name || existing.name || 'Staff Application',
+        description: data.description !== undefined ? data.description : (existing.description || ''),
+        isOpen: data.isOpen !== undefined ? Boolean(data.isOpen) : (existing.isOpen !== undefined ? existing.isOpen : true),
+        panelEmbed: data.panelEmbed || existing.panelEmbed || {
+          title: '🛡️ Server Staff Applications',
+          description: 'Click below to submit an application.',
+          color: '#5865F2',
+          buttonText: 'Apply Now'
+        },
+        panelChannelId: data.panelChannelId || existing.panelChannelId || '',
+        panelMessageId: data.panelMessageId || existing.panelMessageId || null,
+        reviewChannelId: data.reviewChannelId || existing.reviewChannelId || '',
+        questions: Array.isArray(data.questions) ? data.questions : (existing.questions || []),
+        requiredRoleIds: Array.isArray(data.requiredRoleIds) ? data.requiredRoleIds : (existing.requiredRoleIds || []),
+        blockedRoleIds: Array.isArray(data.blockedRoleIds) ? data.blockedRoleIds : (existing.blockedRoleIds || []),
+        minAccountAgeDays: parseInt(data.minAccountAgeDays, 10) || 0,
+        minServerDays: parseInt(data.minServerDays, 10) || 0,
+        reapplyCooldownHours: parseInt(data.reapplyCooldownHours, 10) || 24,
+        acceptRoleIds: Array.isArray(data.acceptRoleIds) ? data.acceptRoleIds : (existing.acceptRoleIds || []),
+        removeRoleIds: Array.isArray(data.removeRoleIds) ? data.removeRoleIds : (existing.removeRoleIds || []),
+        acceptDmEmbed: data.acceptDmEmbed || existing.acceptDmEmbed || {
+          title: 'Application Accepted',
+          description: 'Your application has been accepted!',
+          color: '#57F287'
+        },
+        denyDmEmbed: data.denyDmEmbed || existing.denyDmEmbed || {
+          title: 'Application Denied',
+          description: 'Thank you for applying. Unfortunately your application was not accepted at this time.',
+          color: '#ED4245'
+        },
+        createdAt: existing.createdAt || Date.now(),
+        updatedAt: Date.now()
+      };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query(`
+          INSERT INTO shared_collections (collection_name, doc_id, data, updated_at)
+          VALUES ('applicationForms', $1, $2, NOW())
+          ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $2, updated_at = NOW()
+        `, [formId, entry]);
+      } else {
+        if (!memoryStore.applicationForms) memoryStore.applicationForms = {};
+        memoryStore.applicationForms[formId] = entry;
+        saveLocalStore();
+      }
+      return entry;
+    },
+
+    async delete(formId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("DELETE FROM shared_collections WHERE collection_name = 'applicationForms' AND doc_id = $1", [formId]);
+      } else {
+        if (memoryStore.applicationForms) delete memoryStore.applicationForms[formId];
+        saveLocalStore();
+      }
+      return true;
+    }
+  },
+
+  // 7e. Application Submissions
+  applicationSubmissions: {
+    async list(guildId, formId = null, status = null) {
+      if (dbDriver === 'postgres' && pgPool) {
+        let query = "SELECT data FROM shared_collections WHERE collection_name = 'applicationSubmissions' AND data->>'guildId' = $1";
+        const params = [guildId];
+        if (formId) {
+          query += " AND data->>'formId' = $" + (params.length + 1);
+          params.push(formId);
+        }
+        if (status) {
+          query += " AND data->>'status' = $" + (params.length + 1);
+          params.push(status);
+        }
+        query += " ORDER BY (data->>'createdAt')::bigint DESC";
+        const res = await pgPool.query(query, params);
+        return res.rows.map(r => r.data);
+      }
+      return (memoryStore.applicationSubmissions || [])
+        .filter(s => s.guildId === guildId && (!formId || s.formId === formId) && (!status || s.status === status))
+        .sort((a, b) => b.createdAt - a.createdAt);
+    },
+
+    async get(submissionId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'applicationSubmissions' AND (doc_id = $1 OR data->>'submissionId' = $1)", [submissionId]);
+        return res.rows.length > 0 ? res.rows[0].data : null;
+      }
+      return (memoryStore.applicationSubmissions || []).find(s => s.id === submissionId || s.submissionId === submissionId) || null;
+    },
+
+    async create(data) {
+      const submissionId = data.submissionId || `sub_${Date.now()}`;
+      const entry = {
+        id: submissionId,
+        submissionId,
+        botId: data.botId || 'primary',
+        guildId: data.guildId,
+        formId: data.formId,
+        applicantId: data.applicantId,
+        applicantTag: data.applicantTag || 'Unknown#0000',
+        applicantAvatar: data.applicantAvatar || '',
+        answersJson: data.answersJson || [],
+        status: data.status || 'pending',
+        upvotes: Array.isArray(data.upvotes) ? data.upvotes : [],
+        downvotes: Array.isArray(data.downvotes) ? data.downvotes : [],
+        reviewedBy: data.reviewedBy || null,
+        reviewedByTag: data.reviewedByTag || null,
+        reviewNote: data.reviewNote || '',
+        interviewThreadId: data.interviewThreadId || null,
+        reviewMessageId: data.reviewMessageId || null,
+        createdAt: data.createdAt || Date.now(),
+        reviewedAt: null
+      };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("INSERT INTO shared_collections (collection_name, doc_id, data, updated_at) VALUES ('applicationSubmissions', $1, $2, NOW())", [submissionId, entry]);
+      } else {
+        if (!Array.isArray(memoryStore.applicationSubmissions)) memoryStore.applicationSubmissions = [];
+        memoryStore.applicationSubmissions.unshift(entry);
+        saveLocalStore();
+      }
+      return entry;
+    },
+
+    async update(submissionId, partial) {
+      const current = await this.get(submissionId);
+      if (!current) return null;
+      const updated = { ...current, ...partial, updatedAt: Date.now() };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("UPDATE shared_collections SET data = $1, updated_at = NOW() WHERE collection_name = 'applicationSubmissions' AND (doc_id = $2 OR data->>'submissionId' = $2)", [updated, submissionId]);
+      } else {
+        const idx = (memoryStore.applicationSubmissions || []).findIndex(s => s.id === submissionId || s.submissionId === submissionId);
+        if (idx >= 0) {
+          memoryStore.applicationSubmissions[idx] = updated;
+          saveLocalStore();
+        }
+      }
+      return updated;
+    },
+
+    async delete(submissionId) {
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("DELETE FROM shared_collections WHERE collection_name = 'applicationSubmissions' AND (doc_id = $1 OR data->>'submissionId' = $1)", [submissionId]);
+      } else {
+        if (Array.isArray(memoryStore.applicationSubmissions)) {
+          memoryStore.applicationSubmissions = memoryStore.applicationSubmissions.filter(s => s.id !== submissionId && s.submissionId !== submissionId);
+          saveLocalStore();
+        }
+      }
+      return true;
     }
   },
 

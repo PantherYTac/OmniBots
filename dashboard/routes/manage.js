@@ -230,7 +230,7 @@ router.get('/:guildId/leveling', requireAdminAuth, canManageGuild, async (req, r
   });
 });
 
-// 9. Support Tickets & Saved Transcripts
+// 9. Support Tickets Studio & Saved Transcripts
 router.get('/:guildId/tickets', requireAdminAuth, canManageGuild, async (req, res) => {
   const guildId = req.params.guildId;
   const settings = await db.guilds.get(guildId);
@@ -238,6 +238,8 @@ router.get('/:guildId/tickets', requireAdminAuth, canManageGuild, async (req, re
   const categories = await getGuildCategories(guildId);
   const roles = await getGuildRoles(guildId);
   const ticketList = await db.tickets.list(guildId);
+  const ticketCategories = await db.ticketCategories.list(guildId);
+  const ticketPanels = await db.ticketPanels.list(guildId);
 
   res.render('tickets', {
     user: req.session.user,
@@ -246,14 +248,51 @@ router.get('/:guildId/tickets', requireAdminAuth, canManageGuild, async (req, re
     channels,
     categories,
     roles,
-    ticketList
+    ticketList,
+    ticketCategories,
+    ticketPanels,
+    tab: 'tickets'
   });
 });
 
-// 10. Invite Tracker & Analytics
+// 9b. HTML Transcript Direct Browser Viewer
+router.get('/:guildId/tickets/:ticketId/transcript', requireAdminAuth, canManageGuild, async (req, res) => {
+  const ticketId = req.params.ticketId;
+  const ticket = await db.tickets.get(ticketId);
+
+  if (!ticket || (!ticket.htmlTranscript && !ticket.transcriptHtml)) {
+    return res.status(404).render('transcript', { ticket: null });
+  }
+
+  return res.render('transcript', { ticket });
+});
+
+// 10. Staff & Community Applications Manager
+router.get('/:guildId/applications', requireAdminAuth, canManageGuild, async (req, res) => {
+  const guildId = req.params.guildId;
+  const settings = await db.guilds.get(guildId);
+  const channels = await getGuildChannels(guildId);
+  const roles = await getGuildRoles(guildId);
+  const forms = await db.applicationForms.list(guildId);
+  const submissions = await db.applicationSubmissions.list(guildId);
+
+  res.render('applications', {
+    user: req.session.user,
+    guild: req.guild,
+    settings,
+    channels,
+    roles,
+    forms,
+    submissions,
+    tab: 'applications'
+  });
+});
+
+// 11. Invite Tracker & Analytics
 router.get('/:guildId/invites', requireAdminAuth, canManageGuild, async (req, res) => {
   const guildId = req.params.guildId;
   const settings = await db.guilds.get(guildId);
+  const channels = await getGuildChannels(guildId);
   const roles = await getGuildRoles(guildId);
   const inviters = await db.invites.getLeaderboard(guildId, 100);
 
@@ -261,6 +300,7 @@ router.get('/:guildId/invites', requireAdminAuth, canManageGuild, async (req, re
     user: req.session.user,
     guild: req.guild,
     settings,
+    channels,
     roles,
     inviters,
     tab: 'invites'

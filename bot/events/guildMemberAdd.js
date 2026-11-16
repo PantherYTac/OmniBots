@@ -3,10 +3,11 @@
  * Autoroles, Sticky Roles restoration, Welcome messages, Audit logging
  */
 
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const { db } = require('../../shared');
 const logger = require('../../shared/utils/logger');
 const { trackMemberJoin } = require('../utils/inviteTracker');
+const { generateInviteCard } = require('../utils/inviteCard');
 
 module.exports = {
   name: 'guildMemberAdd',
@@ -48,17 +49,79 @@ module.exports = {
       }
     }
 
-    // 3. Welcome Message
-    if (guildSettings.welcome?.enabled && guildSettings.welcome?.channelId) {
+    // 3. Welcome & Invite Announcer Messages
+    const inviterMention = inviteData?.inviterUser ? `<@${inviteData.inviterUser.id}>` : (inviteData?.isVanity ? 'Vanity URL' : 'Direct / Unknown');
+    const inviterTag = inviteData?.inviterUser ? inviteData.inviterUser.tag : (inviteData?.isVanity ? 'Vanity URL' : 'Direct / Unknown');
+    const inviterCount = inviteData?.netInvites != null ? inviteData.netInvites.toString() : '0';
+    const inviteCodeStr = inviteData?.code || 'N/A';
+
+    // 3a. Upgraded Invite Tracker Join Announcer
+    const inviteConf = guildSettings.inviteTracking || {};
+    const joinChanId = inviteConf.joinChannelId;
+    if (inviteConf.enabled !== false && joinChanId) {
+      try {
+        const joinChan = member.guild.channels.cache.get(joinChanId);
+        if (joinChan && joinChan.isTextBased()) {
+          const defaultDesc = 'Welcome {user} (**{user.tag}**) to **{server}**!\n\n📨 **Invited by:** {inviter} (**{inviter.tag}**)\n🏆 **Inviter Total:** **{inviter.invites}** invites (`{invite.code}`)\n👥 **Member Count:** #{member_count}';
+          const rawDesc = inviteConf.joinEmbed?.description || defaultDesc;
+          const desc = rawDesc
+            .replace(/\{user\}/g, `${member}`)
+            .replace(/\{user\.tag\}/g, member.user.tag)
+            .replace(/\{server\}/g, member.guild.name)
+            .replace(/\{member_count\}/g, member.guild.memberCount.toString())
+            .replace(/\{inviter\}/g, inviterMention)
+            .replace(/\{inviter\.tag\}/g, inviterTag)
+            .replace(/\{inviter\.invites\}/g, inviterCount)
+            .replace(/\{invite\.code\}/g, inviteCodeStr);
+
+          const authorText = inviteConf.joinEmbed?.author || 'New Member Arrived!';
+          const accentColor = inviteConf.joinAccentColor || inviteConf.joinEmbed?.color || '#5865F2';
+
+          const embed = new EmbedBuilder()
+            .setAuthor({
+              name: authorText,
+              iconURL: member.guild.iconURL() || undefined
+            })
+            .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+            .setDescription(desc)
+            .setColor(accentColor)
+            .setTimestamp();
+
+          const files = [];
+          if (inviteConf.joinCardEnabled !== false) {
+            try {
+              const cardBuffer = await generateInviteCard({
+                member,
+                inviterUser: inviteData?.inviterUser,
+                inviterRecord: inviteData?.inviterRecord,
+                code: inviteCodeStr,
+                memberCount: member.guild.memberCount,
+                accentColor,
+                gradientStart: inviteConf.joinGradientStart || '#0B0E14',
+                gradientEnd: inviteConf.joinGradientEnd || '#131823'
+              });
+              if (cardBuffer) {
+                files.push(new AttachmentBuilder(cardBuffer, { name: 'invite-card.png' }));
+                embed.setImage('attachment://invite-card.png');
+              }
+            } catch (cardErr) {
+              logger.error('Failed generating invite card', cardErr, 'INVITES');
+            }
+          }
+
+          await joinChan.send({ embeds: [embed], files }).catch(() => {});
+        }
+      } catch (err) {
+        logger.error('Failed to send invite join announcement', err, 'INVITES');
+      }
+    }
+
+    // 3b. Classic Welcome Message (if enabled on a separate channel or fallback)
+    if (guildSettings.welcome?.enabled && guildSettings.welcome?.channelId && guildSettings.welcome.channelId !== joinChanId) {
       try {
         const welcomeChan = member.guild.channels.cache.get(guildSettings.welcome.channelId);
         if (welcomeChan && welcomeChan.isTextBased()) {
           const rawText = guildSettings.welcome.message || 'Welcome {user} to **{server}**! You are member #{member_count}. 🎉';
-          const inviterMention = inviteData?.inviterUser ? `<@${inviteData.inviterUser.id}>` : (inviteData?.isVanity ? 'Vanity URL' : 'Direct / Unknown');
-          const inviterTag = inviteData?.inviterUser ? inviteData.inviterUser.tag : (inviteData?.isVanity ? 'Vanity URL' : 'Direct / Unknown');
-          const inviterCount = inviteData?.netInvites != null ? inviteData.netInvites.toString() : '0';
-          const inviteCodeStr = inviteData?.code || 'N/A';
-
           const text = rawText
             .replace(/\{user\}/g, `${member}`)
             .replace(/\{server\}/g, member.guild.name)

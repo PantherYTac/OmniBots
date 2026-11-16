@@ -1,16 +1,19 @@
 /**
  * OmniBots Comprehensive E2E Test Suite
+ * Tests all core subsystems: Zero-Env engine, Multi-Adapter DB, Dual CommandContext,
+ * Command Router, Tickets, Applications, Dynamic Invite Card Generator, Express Dashboard & Legal Routes.
  */
 
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 
 async function runTests() {
-  console.log('--- STARTING OMNIBOTS TEST SUITE ---');
+  console.log('--- STARTING OMNIBOTS EXPANDED TEST SUITE ---');
 
   // 1. Zero-Env Config Engine & Encryption
-  console.log('\n[1/5] Testing Zero-Env Engine & AES-256-GCM Encryption...');
+  console.log('\n[1/7] Testing Zero-Env Engine & AES-256-GCM Encryption...');
   const { encrypt, decrypt, SESSION_SECRET, ENCRYPTION_KEY } = require('../shared/config');
   assert(SESSION_SECRET && SESSION_SECRET.length >= 32, 'SESSION_SECRET must be at least 32 chars');
   assert(ENCRYPTION_KEY && ENCRYPTION_KEY.length >= 32, 'ENCRYPTION_KEY must be at least 32 chars');
@@ -23,7 +26,7 @@ async function runTests() {
   console.log('✅ Zero-Env Config & Encryption: PASSED');
 
   // 2. Database Multi-Adapter Layer
-  console.log('\n[2/5] Testing Database Layer (Admin, ManagedBots, CommandsConfig)...');
+  console.log('\n[2/7] Testing Database Layer (Admin, ManagedBots, CommandsConfig, Guilds)...');
   const { db } = require('../shared');
   await db.init();
 
@@ -50,7 +53,7 @@ async function runTests() {
   console.log('✅ Database Layer: PASSED');
 
   // 3. CommandContext Dual-Engine
-  console.log('\n[3/5] Testing CommandContext Dual-Engine Abstraction...');
+  console.log('\n[3/7] Testing CommandContext Dual-Engine Abstraction...');
   const CommandContext = require('../bot/structures/CommandContext');
 
   // Mock Slash Interaction
@@ -113,15 +116,7 @@ async function runTests() {
   console.log('✅ CommandContext Dual-Engine: PASSED');
 
   // 4. Command Router & Registry
-  console.log('\n[4/5] Testing Command Loader & Router...');
-  const { loadCommands } = require('../bot/handlers/commandHandler');
-  const { resolveCommand } = require('../bot/handlers/commandRouter');
-  const dummyClient = { commands: new Map() };
-  dummyClient.commands.clear = () => dummyClient.commands = new Map();
-  dummyClient.commands.set = (k, v) => dummyClient.commands.set ? Map.prototype.set.call(dummyClient.commands, k, v) : null;
-  dummyClient.commands = new Map();
-
-  // Test command files resolution
+  console.log('\n[4/7] Testing Command Loader & Router...');
   const commandsDir = path.join(__dirname, '..', 'bot', 'commands');
   const allDirs = fs.readdirSync(commandsDir);
   let totalCommandFiles = 0;
@@ -132,53 +127,157 @@ async function runTests() {
       totalCommandFiles += files.length;
     }
   }
-  assert(totalCommandFiles >= 20, `Total commands must be at least 20, found ${totalCommandFiles}`);
+  assert(totalCommandFiles >= 50, `Total commands must be at least 50, found ${totalCommandFiles}`);
   console.log(`✅ Command Registry: Loaded & Verified ${totalCommandFiles} Commands across all modules: PASSED`);
 
-  // 5. Express Dashboard Server & Routes
-  console.log('\n[5/5] Testing Express Dashboard Server & Setup Wizard...');
-  const { app } = require('../dashboard/server');
-  const http = require('http');
-  const server = http.createServer(app);
+  // 5. Multi-Category Tickets & Staff Applications DB Models
+  console.log('\n[5/7] Testing Tickets & Applications Database Models...');
+  const testBotId = 'bot_test_123';
+  const testGuildId = 'guild_test_456';
 
-  const socketPath = '/tmp/omnibots-test.sock';
-  if (fs.existsSync(socketPath)) {
-    try { fs.unlinkSync(socketPath); } catch {}
-  }
-
-  await new Promise(resolve => server.listen(socketPath, resolve));
-
-  const makeRequest = (reqPath) => new Promise((resolve, reject) => {
-    const req = http.request({ socketPath, path: reqPath, method: 'GET' }, (res) => {
-      let data = '';
-      res.on('data', chunk => { data += chunk; });
-      res.on('end', () => resolve({ status: res.statusCode, data }));
-    });
-    req.on('error', reject);
-    req.end();
+  // Ticket Categories & Panels
+  const cat1 = await db.ticketCategories.save('cat_general', {
+    botId: testBotId,
+    guildId: testGuildId,
+    name: 'General Support',
+    emoji: '🎫',
+    description: 'Need help with something?',
+    buttonColor: 'Primary',
+    modalQuestions: [
+      { id: 'q_issue', label: 'What is your issue?', style: 'Paragraph', required: true }
+    ]
   });
+  assert.strictEqual(cat1.name, 'General Support');
+  const cats = await db.ticketCategories.list(testGuildId, testBotId);
+  assert(cats.some(c => c.id === 'cat_general'), 'Ticket category list must include cat_general');
+
+  const panel1 = await db.ticketPanels.save('panel_main', {
+    botId: testBotId,
+    guildId: testGuildId,
+    channelId: 'channel_tickets',
+    panelEmbed: {
+      title: 'Support Center',
+      description: 'Need assistance? Open a ticket below.',
+      color: '#5865F2'
+    },
+    selectorStyle: 'buttons',
+    categoryIds: ['cat_general']
+  });
+  assert.strictEqual(panel1.panelEmbed.title, 'Support Center');
+
+  // Ticket creation & close
+  const ticket1 = await db.tickets.create({
+    ticketId: 'ticket-general-1',
+    botId: testBotId,
+    guildId: testGuildId,
+    channelId: 'ch_ticket_1',
+    openerId: 'user_123',
+    categoryId: 'cat_general',
+    status: 'open',
+    answersJson: JSON.stringify({ q_issue: 'My test problem' })
+  });
+  assert.strictEqual(ticket1.status, 'open');
+  await db.tickets.update(ticket1.id, {
+    status: 'closed',
+    closeReason: 'Resolved by admin',
+    closedBy: 'admin_1'
+  });
+  const closedTicket = await db.tickets.get(ticket1.id);
+  assert.strictEqual(closedTicket.status, 'closed');
+
+  // Application Forms & Submissions
+  const appForm = await db.applicationForms.save('form_mod', {
+    botId: testBotId,
+    guildId: testGuildId,
+    name: 'Moderator Application',
+    description: 'Join our moderation staff',
+    isOpen: true,
+    questions: [
+      { prompt: 'Why do you want to join?', type: 'paragraph' }
+    ]
+  });
+  assert.strictEqual(appForm.name, 'Moderator Application');
+
+  const appSub = await db.applicationSubmissions.create({
+    formId: 'form_mod',
+    botId: testBotId,
+    guildId: testGuildId,
+    userId: 'applicant_1',
+    answers: [{ question: 'Why do you want to join?', answer: 'I love helping people' }],
+    status: 'pending'
+  });
+  assert.strictEqual(appSub.status, 'pending');
+  await db.applicationSubmissions.update(appSub.id, {
+    status: 'accepted',
+    reviewedBy: 'reviewer_1',
+    reviewNote: 'Great answers!'
+  });
+  const reviewedSub = await db.applicationSubmissions.get(appSub.id);
+  assert.strictEqual(reviewedSub.status, 'accepted');
+  console.log('✅ Tickets & Applications DB Architecture: PASSED');
+
+  // 6. Dynamic Invite Picture Card Generator
+  console.log('\n[6/7] Testing Dynamic Invite Picture Card Generator (Pure-JS / Hostinger-Safe)...');
+  const { generateInviteCard } = require('../bot/utils/inviteCard');
+  const cardBuffer = await generateInviteCard({
+    joiningUser: { username: 'NewUser', tag: 'NewUser#1234', avatarURL: () => null },
+    inviterUser: { username: 'InviterPro', tag: 'InviterPro#9999', avatarURL: () => null },
+    inviterTotal: 42,
+    memberCount: 1337,
+    guildName: 'OmniBots HQ',
+    accentColor: '#5865F2',
+    gradientStart: '#0B0E14',
+    gradientEnd: '#131823'
+  });
+  assert(Buffer.isBuffer(cardBuffer), 'Card result must be a Buffer');
+  assert(cardBuffer.length > 500, `Card buffer must contain image data, received ${cardBuffer.length} bytes`);
+  console.log(`✅ Dynamic Invite Picture Card: Generated valid image buffer (${cardBuffer.length} bytes): PASSED`);
+
+  // 7. Express Dashboard Server & Public Legal Routes
+  console.log('\n[7/7] Testing Express Dashboard Server & Public Routes (/health, /privacy, /terms)...');
+  const { app } = require('../dashboard/server');
+
+  function testRoute(targetPath) {
+    return new Promise((resolve) => {
+      const req = new http.IncomingMessage();
+      req.method = 'GET';
+      req.url = targetPath;
+      req.headers = { host: 'localhost' };
+      req.socket = { encrypted: false, remoteAddress: '127.0.0.1' };
+      req.connection = req.socket;
+
+      const res = new http.ServerResponse(req);
+      let output = '';
+      res.write = (chunk) => { output += chunk; return true; };
+      res.end = (chunk) => {
+        if (chunk) output += chunk;
+        resolve({ statusCode: res.statusCode, body: output });
+      };
+      app.handle(req, res);
+    });
+  }
 
   // Test /health endpoint
-  const healthRes = await makeRequest('/health');
-  assert.strictEqual(healthRes.status, 200, 'Health endpoint must return 200');
-  assert(healthRes.data.includes('"status":"ok"'), 'Health response must contain status ok');
+  const healthRes = await testRoute('/health');
+  assert.strictEqual(healthRes.statusCode, 200, 'Health endpoint must return 200');
+  assert(healthRes.body.includes('"status":"ok"'), 'Health response must contain status ok');
 
   // Test /privacy public endpoint
-  const privacyRes = await makeRequest('/privacy');
-  assert.strictEqual(privacyRes.status, 200, 'Privacy endpoint must return 200');
+  const privacyRes = await testRoute('/privacy');
+  assert.strictEqual(privacyRes.statusCode, 200, 'Privacy endpoint must return 200');
+  assert(privacyRes.body.includes('OmniBots'), 'Privacy policy must feature OmniBots');
+  assert(!privacyRes.body.includes('Antigravity Bot'), 'Privacy policy must not contain Antigravity Bot');
 
   // Test /terms public endpoint
-  const termsRes = await makeRequest('/terms');
-  assert.strictEqual(termsRes.status, 200, 'Terms endpoint must return 200');
+  const termsRes = await testRoute('/terms');
+  assert.strictEqual(termsRes.statusCode, 200, 'Terms endpoint must return 200');
+  assert(termsRes.body.includes('OmniBots'), 'Terms of Service must feature OmniBots');
+  assert(!termsRes.body.includes('Antigravity Bot'), 'Terms of Service must not contain Antigravity Bot');
 
-  server.close();
-  if (fs.existsSync(socketPath)) {
-    try { fs.unlinkSync(socketPath); } catch {}
-  }
-  console.log('✅ Express Dashboard Server & Public Routes: PASSED');
+  console.log('✅ Express Dashboard Server & Public Legal Routes: PASSED');
 
   console.log('\n========================================');
-  console.log('🎉 ALL 5 TEST SUITES PASSED FLAWLESSLY!');
+  console.log('🎉 ALL 7 TEST SUITES PASSED FLAWLESSLY!');
   console.log('========================================');
 }
 

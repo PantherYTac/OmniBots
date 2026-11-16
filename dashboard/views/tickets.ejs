@@ -1,71 +1,216 @@
-<%- include('partials/head', { title: `${guild.name} • Support Tickets` }) %>
+<%- include('partials/head', { title: `${guild.name} • Support Ticket Studio` }) %>
 <%- include('partials/navbar') %>
 
 <div class="flex-1 flex">
   <%- include('partials/sidebar', { tab: 'tickets', guild }) %>
 
   <main class="flex-1 p-6 sm:p-10 space-y-8 overflow-y-auto max-w-6xl">
-    <div class="border-b border-[#1E2538] pb-6">
-      <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Support Tickets & HTML Transcripts</h1>
-      <p class="text-slate-400 text-sm mt-1">BotGhost-style multi-category ticket channels, claim workflows, and archived HTML transcripts.</p>
+    <!-- Header Banner -->
+    <div class="border-b border-[#1E2538] pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+          <i data-lucide="ticket" class="w-8 h-8 text-blurple"></i>
+          <span>Multi-Category Support Ticket Studio</span>
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Multi-department support tickets, pre-ticket questionnaire modals, claim workflows, and archived HTML transcripts.</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button type="button" id="open-new-cat-btn" class="px-4 py-2 rounded-xl bg-blurple hover:bg-blurple-hover text-white text-xs font-bold shadow-md shadow-blurple/20 flex items-center gap-2 transition">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>New Category</span>
+        </button>
+        <button type="button" id="open-new-panel-btn" class="px-4 py-2 rounded-xl bg-[#1E2538] hover:bg-[#283248] text-white text-xs font-bold border border-[#2B354C] flex items-center gap-2 transition">
+          <i data-lucide="layout" class="w-4 h-4 text-cyan-accent"></i>
+          <span>Design Panel</span>
+        </button>
+      </div>
     </div>
 
     <% const tickets = settings.tickets || {}; %>
-    <!-- Ticket Configuration Form -->
-    <form action="/api/guilds/<%= guild.id %>/tickets" method="POST" class="ajax-save-form space-y-6">
-      <div class="glass-card p-6 space-y-6">
-        <h2 class="text-lg font-bold text-white flex items-center gap-2">
-          <i data-lucide="settings" class="w-5 h-5 text-blurple"></i>
-          <span>Ticket System Roles & Channels</span>
-        </h2>
+    <!-- 1. System Defaults Form -->
+    <form action="/api/guilds/<%= guild.id %>/tickets" method="POST" class="ajax-save-form glass-card p-6 space-y-6">
+      <div class="flex items-center justify-between border-b border-[#1E2538] pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="settings" class="w-5 h-5 text-blurple"></i>
+            <span>System Default Roles & Channels</span>
+          </h2>
+          <p class="text-xs text-slate-400">Fallback support role and transcript log channel across all categories.</p>
+        </div>
+        <button type="submit" class="bg-blurple hover:bg-blurple-hover text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blurple/20">
+          <i data-lucide="save" class="w-3.5 h-3.5"></i>
+          <span>Save System Settings</span>
+        </button>
+      </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Support Staff Role</label>
-            <select name="supportRoleId" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
-              <option value="">No role (Admins only)</option>
-              <% roles.forEach(r => { %>
-                <option value="<%= r.id %>" <%= tickets.supportRoleId === r.id ? 'selected' : '' %>>@<%= r.name %></option>
-              <% }); %>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Ticket Category (Discord)</label>
-            <select name="categoryId" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
-              <option value="">No category (Root)</option>
-              <% categories.forEach(cat => { %>
-                <option value="<%= cat.id %>" <%= tickets.categoryId === cat.id ? 'selected' : '' %>><%= cat.name %></option>
-              <% }); %>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Transcript Log Channel</label>
-            <select name="logChannelId" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
-              <option value="">No channel</option>
-              <% channels.forEach(ch => { %>
-                <option value="<%= ch.id %>" <%= tickets.logChannelId === ch.id ? 'selected' : '' %>># <%= ch.name %></option>
-              <% }); %>
-            </select>
-          </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Default Support Staff Role</label>
+          <select name="supportRoleId" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
+            <option value="">No role (Admins only)</option>
+            <% roles.forEach(r => { %>
+              <option value="<%= r.id %>" <%= tickets.supportRoleId === r.id ? 'selected' : '' %>>@<%= r.name %></option>
+            <% }); %>
+          </select>
         </div>
 
-        <button type="submit" class="bg-blurple hover:bg-blurple-hover text-white text-sm font-bold px-6 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-blurple/25">
-          <i data-lucide="save" class="w-4 h-4"></i>
-          <span>Save Ticket Settings</span>
-        </button>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Default Category (Discord)</label>
+          <select name="categoryId" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
+            <option value="">Root Server Level (No Category)</option>
+            <% categories.forEach(cat => { %>
+              <option value="<%= cat.id %>" <%= tickets.categoryId === cat.id ? 'selected' : '' %>><%= cat.name %></option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">HTML Transcript Log Channel</label>
+          <select name="logChannelId" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blurple text-sm">
+            <option value="">No channel</option>
+            <% channels.forEach(ch => { %>
+              <option value="<%= ch.id %>" <%= tickets.logChannelId === ch.id ? 'selected' : '' %>># <%= ch.name %></option>
+            <% }); %>
+          </select>
+        </div>
       </div>
     </form>
 
-    <!-- Saved Tickets & Transcripts Table -->
-    <div class="glass-card p-6 space-y-4">
+    <!-- 2. Department Categories Studio -->
+    <div class="glass-card p-6 space-y-6">
       <div class="flex items-center justify-between border-b border-[#1E2538] pb-4">
         <div>
-          <h2 class="text-lg font-bold text-white">Saved Tickets & HTML Transcripts</h2>
-          <p class="text-xs text-slate-400">All created and closed support tickets with direct browser transcript viewing.</p>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="layers" class="w-5 h-5 text-cyan-accent"></i>
+            <span>Support Departments & Categories</span>
+          </h2>
+          <p class="text-xs text-slate-400">Configure separate ticket queues with custom names, pre-open questions, colors, and permissions.</p>
         </div>
-        <span class="text-xs text-slate-500"><%= ticketList.length %> Tickets</span>
+        <span class="text-xs text-slate-500 font-mono font-semibold"><%= ticketCategories.length %> Department(s)</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <% ticketCategories.forEach(cat => { %>
+          <div class="p-5 rounded-2xl bg-[#0B0E14] border border-[#1E2538] hover:border-[#2B354C] transition flex flex-col justify-between space-y-4">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-2xl"><%= cat.emoji || '🎫' %></span>
+                  <div>
+                    <h3 class="text-white font-bold text-sm"><%= cat.name %></h3>
+                    <span class="text-[11px] font-mono text-slate-500"><%= cat.id %></span>
+                  </div>
+                </div>
+                <% 
+                  const colorBadges = {
+                    'Primary': 'bg-blurple/20 text-blurple border-blurple/30',
+                    'Success': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                    'Secondary': 'bg-slate-700/50 text-slate-300 border-slate-600/30',
+                    'Danger': 'bg-red-500/20 text-red-400 border-red-500/30'
+                  };
+                %>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border <%= colorBadges[cat.buttonColor] || colorBadges['Primary'] %>">
+                  <%= cat.buttonColor || 'Primary' %>
+                </span>
+              </div>
+
+              <p class="text-xs text-slate-400 line-clamp-2"><%= cat.description || 'No description provided.' %></p>
+
+              <div class="text-[11px] space-y-1 text-slate-500 border-t border-[#1E2538] pt-2">
+                <div>Naming: <span class="font-mono text-slate-300"><%= cat.channelNamePattern || 'ticket-{category}-{username}' %></span></div>
+                <div>Questions: <span class="font-bold text-cyan-accent"><%= (cat.modalQuestions || []).length %> pre-open</span></div>
+                <div>Max Open: <span class="font-bold text-white"><%= cat.maxOpenPerUser || 1 %></span></div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-[#1E2538]">
+              <button type="button" class="edit-cat-btn px-3 py-1.5 rounded-lg bg-[#131823] hover:bg-[#1E2538] text-xs font-semibold text-slate-300 hover:text-white transition flex items-center gap-1.5" data-cat='<%- JSON.stringify(cat).replace(/\x27/g, "&apos;") %>'>
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                <span>Edit</span>
+              </button>
+              <button type="button" class="del-cat-btn px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-xs font-semibold text-red-400 transition flex items-center gap-1.5" data-id="<%= cat.id %>">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Delete</span>
+              </button>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+
+    <!-- 3. Ticket Panels & Live Publisher Studio -->
+    <div class="glass-card p-6 space-y-6">
+      <div class="flex items-center justify-between border-b border-[#1E2538] pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="layout" class="w-5 h-5 text-blurple"></i>
+            <span>Interactive Ticket Panels</span>
+          </h2>
+          <p class="text-xs text-slate-400">Design Universal Embed panels and publish them live into any server channel.</p>
+        </div>
+      </div>
+
+      <% if (ticketPanels.length === 0) { %>
+        <div class="text-center py-8 text-slate-500 text-sm space-y-2">
+          <p>No ticket panels designed yet.</p>
+          <button type="button" id="create-first-panel-btn" class="px-4 py-2 rounded-xl bg-blurple hover:bg-blurple-hover text-white text-xs font-bold">Design Your First Panel</button>
+        </div>
+      <% } else { %>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <% ticketPanels.forEach(panel => { %>
+            <div class="p-5 rounded-2xl bg-[#0B0E14] border border-[#1E2538] space-y-4 flex flex-col justify-between">
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-white font-bold text-sm"><%= panel.panelEmbed?.title || 'Support Desk' %></h3>
+                  <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-blurple/10 text-blurple border border-blurple/20">
+                    <%= panel.selectorStyle || 'buttons' %>
+                  </span>
+                </div>
+                <p class="text-xs text-slate-400"><%= panel.panelEmbed?.description || 'Select a department below to open a ticket.' %></p>
+                <% if (panel.messageId) { %>
+                  <div class="text-[11px] text-emerald-400 flex items-center gap-1.5 font-medium">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                    <span>Live in channel <#<%= panel.channelId %>></span>
+                  </div>
+                <% } else { %>
+                  <div class="text-[11px] text-amber-400 flex items-center gap-1.5 font-medium">
+                    <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                    <span>Not published to Discord yet</span>
+                  </div>
+                <% } %>
+              </div>
+
+              <div class="flex items-center justify-between pt-3 border-t border-[#1E2538] gap-2">
+                <button type="button" class="publish-panel-btn px-3 py-1.5 rounded-lg bg-blurple hover:bg-blurple-hover text-white text-xs font-bold transition flex items-center gap-1.5" data-id="<%= panel.id %>">
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                  <span>Publish to Discord</span>
+                </button>
+                <div class="flex items-center gap-2">
+                  <button type="button" class="del-panel-btn p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition" data-id="<%= panel.id %>">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- 4. Saved Support Tickets & HTML Transcripts Table -->
+    <div class="glass-card p-6 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#1E2538] pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="archive" class="w-5 h-5 text-cyan-accent"></i>
+            <span>Saved Tickets & Archived HTML Transcripts</span>
+          </h2>
+          <p class="text-xs text-slate-400">View real-time status and read saved HTML conversation transcripts in your browser.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <input type="text" id="ticket-search-input" placeholder="Search by User or Ticket ID..." class="bg-[#0B0E14] border border-[#1E2538] rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blurple w-56">
+        </div>
       </div>
 
       <% if (ticketList.length === 0) { %>
@@ -74,45 +219,49 @@
         </div>
       <% } else { %>
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
+          <table class="w-full text-left text-sm" id="tickets-table">
             <thead>
               <tr class="text-xs text-slate-400 border-b border-[#1E2538]">
                 <th class="py-3 px-4">Ticket ID</th>
-                <th class="py-3 px-4">User</th>
-                <th class="py-3 px-4">Category</th>
+                <th class="py-3 px-4">Opener</th>
+                <th class="py-3 px-4">Department</th>
                 <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4">Claimed By</th>
                 <th class="py-3 px-4">Created</th>
                 <th class="py-3 px-4 text-right">Transcript</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-[#1E2538]">
               <% ticketList.forEach(t => { %>
-                <tr class="hover:bg-[#181F2E]/50 transition">
-                  <td class="py-3 px-4 font-mono text-xs text-blurple"><%= t.id %></td>
-                  <td class="py-3 px-4 text-slate-300 font-medium"><%= t.userName || t.userId %></td>
-                  <td class="py-3 px-4 text-slate-400 uppercase text-xs font-semibold"><%= t.category || 'General' %></td>
+                <tr class="hover:bg-[#181F2E]/50 transition ticket-row" data-search="<%= (t.id || '') + ' ' + (t.userName || '') + ' ' + (t.openerTag || '') + ' ' + (t.userId || '') + ' ' + (t.openerId || '') %>">
+                  <td class="py-3 px-4 font-mono text-xs text-blurple font-bold"><%= t.id || t.ticketId %></td>
+                  <td class="py-3 px-4 text-slate-300 font-medium"><%= t.openerTag || t.userName || t.openerId || t.userId %></td>
+                  <td class="py-3 px-4 text-slate-400 uppercase text-xs font-semibold"><%= t.categoryId || t.category || 'General' %></td>
                   <td class="py-3 px-4">
                     <% if (t.status === 'open') { %>
-                      <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        🟢 Open
+                      <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 w-max">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Open
                       </span>
                     <% } else { %>
-                      <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 border border-slate-600/30">
-                        🔒 Closed
+                      <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 border border-slate-600/30 flex items-center gap-1 w-max">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Closed
                       </span>
                     <% } %>
+                  </td>
+                  <td class="py-3 px-4 text-xs text-slate-400">
+                    <%= t.claimedByTag || (t.claimedBy ? `<@${t.claimedBy}>` : 'Unclaimed') %>
                   </td>
                   <td class="py-3 px-4 text-slate-500 text-xs">
                     <%= new Date(t.createdAt).toLocaleDateString() %>
                   </td>
                   <td class="py-3 px-4 text-right">
-                    <% if (t.transcriptHtml) { %>
-                      <a href="/transcript/<%= t.id %>" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold text-blurple hover:text-white bg-blurple/10 hover:bg-blurple px-3 py-1.5 rounded-lg border border-blurple/30 transition">
+                    <% if (t.htmlTranscript || t.transcriptHtml) { %>
+                      <a href="/dashboard/<%= guild.id %>/tickets/<%= t.id || t.ticketId %>/transcript" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold text-blurple hover:text-white bg-blurple/10 hover:bg-blurple px-3 py-1.5 rounded-lg border border-blurple/30 transition shadow-sm">
                         <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-                        <span>View HTML Transcript</span>
+                        <span>View Transcript</span>
                       </a>
                     <% } else { %>
-                      <span class="text-xs text-slate-600">Pending Close</span>
+                      <span class="text-xs text-slate-600 font-medium">Pending Close</span>
                     <% } %>
                   </td>
                 </tr>
@@ -124,5 +273,424 @@
     </div>
   </main>
 </div>
+
+<!-- MODAL: ADD / EDIT TICKET CATEGORY -->
+<div id="cat-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <div class="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
+    <div class="flex items-center justify-between border-b border-[#1E2538] pb-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2" id="cat-modal-title">
+        <i data-lucide="folder-plus" class="w-5 h-5 text-blurple"></i>
+        <span>Configure Support Category</span>
+      </h3>
+      <button type="button" id="close-cat-modal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+
+    <form id="cat-form" class="space-y-4">
+      <input type="hidden" id="cat-id" name="id">
+
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="sm:col-span-1">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Emoji</label>
+          <input type="text" id="cat-emoji" name="emoji" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm" placeholder="🎫" value="🎫">
+        </div>
+        <div class="sm:col-span-3">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Department Name</label>
+          <input type="text" id="cat-name" name="name" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm" placeholder="General Support" required>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Description</label>
+        <textarea id="cat-desc" name="description" rows="2" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm" placeholder="Help with general server questions and assistance"></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Button Color Style</label>
+          <select id="cat-button-color" name="buttonColor" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm">
+            <option value="Primary">Blurple (Primary)</option>
+            <option value="Success">Green (Success)</option>
+            <option value="Secondary">Gray (Secondary)</option>
+            <option value="Danger">Red (Danger)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Discord Category</label>
+          <select id="cat-discord-cat" name="discordCategoryId" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm">
+            <option value="">Default Category</option>
+            <% categories.forEach(cat => { %>
+              <option value="<%= cat.id %>"><%= cat.name %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Max Open per User</label>
+          <input type="number" id="cat-max-open" name="maxOpenPerUser" min="1" max="5" value="1" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Channel Name Pattern</label>
+        <input type="text" id="cat-pattern" name="channelNamePattern" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm" value="ticket-{category}-{username}-{count}">
+        <span class="text-[11px] text-slate-500">Variables: {category}, {username}, {count}</span>
+      </div>
+
+      <!-- Pre-Ticket Questions Builder -->
+      <div class="border-t border-[#1E2538] pt-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-white uppercase tracking-wider">Pre-Open Questions (Discord Modal, Max 5)</label>
+          <button type="button" id="add-q-btn" class="text-xs text-blurple hover:underline font-bold flex items-center gap-1">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Question
+          </button>
+        </div>
+        <div id="questions-container" class="space-y-3"></div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#1E2538]">
+        <button type="button" id="cancel-cat-btn" class="px-4 py-2 rounded-xl bg-[#131823] hover:bg-[#1E2538] text-white text-xs font-semibold">Cancel</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-blurple hover:bg-blurple-hover text-white text-xs font-bold shadow-md shadow-blurple/20">Save Category</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: DESIGN / PUBLISH TICKET PANEL -->
+<div id="panel-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <div class="glass-card w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
+    <div class="flex items-center justify-between border-b border-[#1E2538] pb-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <i data-lucide="layout" class="w-5 h-5 text-cyan-accent"></i>
+        <span>Design Support Ticket Panel</span>
+      </h3>
+      <button type="button" id="close-panel-modal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+
+    <form id="panel-form" class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Panel Title</label>
+        <input type="text" id="panel-title" name="title" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm" value="🎫 Server Support Desk" required>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Instructions / Description</label>
+        <textarea id="panel-desc" name="description" rows="3" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm" required>Need assistance, have questions, or need to report an incident?
+Click a department below to open a private ticket with our support staff.</textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Selector Style</label>
+          <select id="panel-selector" name="selectorStyle" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm">
+            <option value="buttons">Interactive Buttons (up to 5)</option>
+            <option value="dropdown">Dropdown Select Menu (up to 25)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Embed Accent Color</label>
+          <input type="color" id="panel-color" name="color" value="#5865F2" class="w-full h-10 bg-[#0B0E14] border border-[#1E2538] rounded-xl p-1 cursor-pointer">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Categories to Include</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 bg-[#0B0E14] rounded-xl border border-[#1E2538]">
+          <% ticketCategories.forEach(cat => { %>
+            <label class="flex items-center gap-2 text-xs text-slate-300 p-1.5 hover:bg-[#131823] rounded-lg cursor-pointer">
+              <input type="checkbox" name="categoryIds" value="<%= cat.id %>" checked class="rounded border-slate-700 text-blurple focus:ring-0">
+              <span><%= cat.emoji || '🎫' %> <%= cat.name %></span>
+            </label>
+          <% }); %>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#1E2538]">
+        <button type="button" id="cancel-panel-btn" class="px-4 py-2 rounded-xl bg-[#131823] hover:bg-[#1E2538] text-white text-xs font-semibold">Cancel</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-blurple hover:bg-blurple-hover text-white text-xs font-bold shadow-md shadow-blurple/20">Save Panel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: PUBLISH PANEL TO DISCORD CHANNEL -->
+<div id="publish-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <div class="glass-card w-full max-w-md p-6 space-y-5">
+    <div class="flex items-center justify-between border-b border-[#1E2538] pb-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <i data-lucide="send" class="w-5 h-5 text-blurple"></i>
+        <span>Publish Panel to Discord</span>
+      </h3>
+      <button type="button" id="close-publish-modal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+
+    <form id="publish-form" class="space-y-4">
+      <input type="hidden" id="publish-panel-id" name="panelId">
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Select Target Channel</label>
+        <select id="publish-channel" name="channelId" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-xl px-4 py-2.5 text-white text-sm" required>
+          <% channels.forEach(ch => { %>
+            <option value="<%= ch.id %>"># <%= ch.name %></option>
+          <% }); %>
+        </select>
+        <p class="text-[11px] text-slate-500 mt-1">The bot will send the interactive ticket embed and buttons into this channel.</p>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#1E2538]">
+        <button type="button" id="cancel-publish-btn" class="px-4 py-2 rounded-xl bg-[#131823] text-white text-xs font-semibold">Cancel</button>
+        <button type="submit" id="confirm-publish-btn" class="px-5 py-2.5 rounded-xl bg-blurple hover:bg-blurple-hover text-white text-xs font-bold shadow-md shadow-blurple/20 flex items-center gap-1.5">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          <span>Publish Now</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const guildId = '<%= guild.id %>';
+
+  // Questions dynamic builder
+  let questionsList = [];
+  function renderQuestions() {
+    const container = document.getElementById('questions-container');
+    container.innerHTML = '';
+    questionsList.forEach((q, idx) => {
+      const div = document.createElement('div');
+      div.className = 'p-3 rounded-xl bg-[#131823] border border-[#1E2538] space-y-2';
+      div.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-300">Question ${idx + 1}</span>
+          <button type="button" class="text-red-400 hover:text-red-300 text-xs font-semibold" onclick="removeQuestion(${idx})">Remove</button>
+        </div>
+        <input type="text" class="w-full bg-[#0B0E14] border border-[#1E2538] rounded-lg px-3 py-1.5 text-xs text-white" placeholder="Question prompt (e.g. What is your issue?)" value="${q.label || ''}" onchange="updateQuestionLabel(${idx}, this.value)">
+        <div class="flex items-center gap-3">
+          <select class="bg-[#0B0E14] border border-[#1E2538] rounded-lg px-2 py-1 text-xs text-white" onchange="updateQuestionStyle(${idx}, this.value)">
+            <option value="paragraph" ${q.style === 'paragraph' ? 'selected' : ''}>Paragraph (Multi-line)</option>
+            <option value="short" ${q.style === 'short' ? 'selected' : ''}>Short (Single-line)</option>
+          </select>
+          <label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+            <input type="checkbox" ${q.required !== false ? 'checked' : ''} onchange="updateQuestionRequired(${idx}, this.checked)">
+            <span>Required</span>
+          </label>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  window.removeQuestion = (idx) => {
+    questionsList.splice(idx, 1);
+    renderQuestions();
+  };
+  window.updateQuestionLabel = (idx, val) => { questionsList[idx].label = val; };
+  window.updateQuestionStyle = (idx, val) => { questionsList[idx].style = val; };
+  window.updateQuestionRequired = (idx, val) => { questionsList[idx].required = val; };
+
+  document.getElementById('add-q-btn').addEventListener('click', () => {
+    if (questionsList.length >= 5) return alert('Discord allows a maximum of 5 fields per modal.');
+    questionsList.push({ label: '', style: 'paragraph', required: true });
+    renderQuestions();
+  });
+
+  // Category Modal Handlers
+  const catModal = document.getElementById('cat-modal');
+  const openNewCatBtn = document.getElementById('open-new-cat-btn');
+  const closeCatModal = document.getElementById('close-cat-modal');
+  const cancelCatBtn = document.getElementById('cancel-cat-btn');
+
+  function showCatModal(cat = null) {
+    document.getElementById('cat-id').value = cat ? cat.id : '';
+    document.getElementById('cat-emoji').value = cat ? cat.emoji : '🎫';
+    document.getElementById('cat-name').value = cat ? cat.name : '';
+    document.getElementById('cat-desc').value = cat ? (cat.description || '') : '';
+    document.getElementById('cat-button-color').value = cat ? (cat.buttonColor || 'Primary') : 'Primary';
+    document.getElementById('cat-discord-cat').value = cat ? (cat.discordCategoryId || '') : '';
+    document.getElementById('cat-max-open').value = cat ? (cat.maxOpenPerUser || 1) : 1;
+    document.getElementById('cat-pattern').value = cat ? (cat.channelNamePattern || 'ticket-{category}-{username}-{count}') : 'ticket-{category}-{username}-{count}';
+
+    questionsList = cat && Array.isArray(cat.modalQuestions) ? JSON.parse(JSON.stringify(cat.modalQuestions)) : [];
+    renderQuestions();
+
+    document.getElementById('cat-modal-title').innerHTML = `<i data-lucide="${cat ? 'edit-3' : 'folder-plus'}" class="w-5 h-5 text-blurple"></i><span>${cat ? 'Edit Department Category' : 'Create Department Category'}</span>`;
+    if (window.lucide) window.lucide.createIcons();
+    catModal.classList.remove('hidden');
+  }
+
+  if (openNewCatBtn) openNewCatBtn.addEventListener('click', () => showCatModal());
+  if (closeCatModal) closeCatModal.addEventListener('click', () => catModal.classList.add('hidden'));
+  if (cancelCatBtn) cancelCatBtn.addEventListener('click', () => catModal.classList.add('hidden'));
+
+  document.querySelectorAll('.edit-cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      try {
+        const cat = JSON.parse(btn.getAttribute('data-cat'));
+        showCatModal(cat);
+      } catch (err) {
+        alert('Error loading category data: ' + err.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('.del-cat-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!confirm('Are you sure you want to delete this ticket category?')) return;
+      try {
+        const res = await fetch(`/api/guilds/${guildId}/tickets/categories/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) window.location.reload();
+        else alert(data.error || 'Failed to delete category');
+      } catch {
+        alert('Network error deleting category');
+      }
+    });
+  });
+
+  document.getElementById('cat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      id: document.getElementById('cat-id').value,
+      emoji: document.getElementById('cat-emoji').value,
+      name: document.getElementById('cat-name').value,
+      description: document.getElementById('cat-desc').value,
+      buttonColor: document.getElementById('cat-button-color').value,
+      discordCategoryId: document.getElementById('cat-discord-cat').value,
+      maxOpenPerUser: parseInt(document.getElementById('cat-max-open').value, 10),
+      channelNamePattern: document.getElementById('cat-pattern').value,
+      modalQuestions: questionsList.filter(q => q.label && q.label.trim())
+    };
+
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/tickets/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) window.location.reload();
+      else alert(data.error || 'Failed to save category');
+    } catch {
+      alert('Network error saving category');
+    }
+  });
+
+  // Panel Modal Handlers
+  const panelModal = document.getElementById('panel-modal');
+  const openNewPanelBtn = document.getElementById('open-new-panel-btn');
+  const createFirstPanelBtn = document.getElementById('create-first-panel-btn');
+  const closePanelModal = document.getElementById('close-panel-modal');
+  const cancelPanelBtn = document.getElementById('cancel-panel-btn');
+
+  function showPanelModal() { panelModal.classList.remove('hidden'); }
+  if (openNewPanelBtn) openNewPanelBtn.addEventListener('click', showPanelModal);
+  if (createFirstPanelBtn) createFirstPanelBtn.addEventListener('click', showPanelModal);
+  if (closePanelModal) closePanelModal.addEventListener('click', () => panelModal.classList.add('hidden'));
+  if (cancelPanelBtn) cancelPanelBtn.addEventListener('click', () => panelModal.classList.add('hidden'));
+
+  document.getElementById('panel-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const checked = Array.from(document.querySelectorAll('input[name="categoryIds"]:checked')).map(c => c.value);
+    const payload = {
+      title: document.getElementById('panel-title').value,
+      description: document.getElementById('panel-desc').value,
+      selectorStyle: document.getElementById('panel-selector').value,
+      color: document.getElementById('panel-color').value,
+      categoryIds: checked
+    };
+
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/tickets/panels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) window.location.reload();
+      else alert(data.error || 'Failed to save panel');
+    } catch {
+      alert('Network error saving panel');
+    }
+  });
+
+  document.querySelectorAll('.del-panel-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!confirm('Are you sure you want to delete this panel configuration?')) return;
+      try {
+        const res = await fetch(`/api/guilds/${guildId}/tickets/panels/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) window.location.reload();
+        else alert(data.error || 'Failed to delete panel');
+      } catch {
+        alert('Network error deleting panel');
+      }
+    });
+  });
+
+  // Publish Modal Handlers
+  const publishModal = document.getElementById('publish-modal');
+  const closePublishModal = document.getElementById('close-publish-modal');
+  const cancelPublishBtn = document.getElementById('cancel-publish-btn');
+  const publishPanelId = document.getElementById('publish-panel-id');
+
+  document.querySelectorAll('.publish-panel-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      publishPanelId.value = btn.getAttribute('data-id');
+      publishModal.classList.remove('hidden');
+    });
+  });
+
+  if (closePublishModal) closePublishModal.addEventListener('click', () => publishModal.classList.add('hidden'));
+  if (cancelPublishBtn) cancelPublishBtn.addEventListener('click', () => publishModal.classList.add('hidden'));
+
+  document.getElementById('publish-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('confirm-publish-btn');
+    btn.disabled = true;
+    btn.innerText = 'Publishing...';
+
+    const payload = {
+      panelId: publishPanelId.value,
+      channelId: document.getElementById('publish-channel').value
+    };
+
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/tickets/publish-panel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Ticket panel published live to Discord!');
+        window.location.reload();
+      } else {
+        alert(data.error || 'Failed to publish panel');
+        btn.disabled = false;
+        btn.innerText = 'Publish Now';
+      }
+    } catch {
+      alert('Network error publishing panel');
+      btn.disabled = false;
+      btn.innerText = 'Publish Now';
+    }
+  });
+
+  // Search filter in tickets table
+  const searchInput = document.getElementById('ticket-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      document.querySelectorAll('.ticket-row').forEach(row => {
+        const search = row.getAttribute('data-search').toLowerCase();
+        row.style.display = search.includes(query) ? '' : 'none';
+      });
+    });
+  }
+
+  if (window.lucide) window.lucide.createIcons();
+});
+</script>
 
 <%- include('partials/footer') %>

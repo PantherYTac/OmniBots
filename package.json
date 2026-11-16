@@ -27,7 +27,7 @@
     "leveling",
     "economy"
   ],
-  "author": "Antigravity Engineering",
+  "author": "OmniBots Team",
   "license": "MIT",
   "dependencies": {
     "@discordjs/rest": "^2.4.0",

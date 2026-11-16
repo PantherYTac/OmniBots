@@ -30,6 +30,9 @@ function getRest() {
   if (primary?.token) {
     return new REST({ version: '10' }).setToken(primary.token);
   }
+  for (const client of botManager.clients.values()) {
+    if (client?.token) return new REST({ version: '10' }).setToken(client.token);
+  }
   const token = process.env.DISCORD_TOKEN;
   if (!token) return null;
   return new REST({ version: '10' }).setToken(token);
@@ -39,6 +42,9 @@ function getRest() {
  * Check if any managed bot is present in a guild
  */
 async function isBotInGuild(guildId) {
+  if (!guildId) return false;
+
+  // 1. Check in-memory cache
   if (inProcessClient && inProcessClient.guilds?.cache?.has(guildId)) {
     return true;
   }
@@ -47,14 +53,32 @@ async function isBotInGuild(guildId) {
       return true;
     }
   }
+
+  // 2. Try fetching from live gateway clients
+  for (const client of botManager.clients.values()) {
+    try {
+      const fetched = await client.guilds.fetch(guildId).catch(() => null);
+      if (fetched) return true;
+    } catch {}
+  }
+
+  // 3. Try Discord REST with available tokens
   try {
     const rest = getRest();
-    if (!rest) return false;
-    await rest.get(Routes.guild(guildId));
-    return true;
-  } catch {
-    return false;
-  }
+    if (rest) {
+      await rest.get(Routes.guild(guildId));
+      return true;
+    }
+  } catch {}
+
+  // 4. Check if guild is already saved in database
+  try {
+    const { db } = require('../../shared');
+    const saved = await db.guilds.get(guildId);
+    if (saved) return true;
+  } catch {}
+
+  return false;
 }
 
 /**
@@ -286,6 +310,161 @@ async function getBotGuilds() {
   }
 }
 
+/**
+ * Publish an interactive Ticket Panel to Discord
+ */
+async function publishTicketPanel(guildId, channelId, panelData, categories = []) {
+  const client = getClientForGuild(guildId);
+  const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+
+  const colorInt = panelData.panelEmbed?.color ? parseInt(panelData.panelEmbed.color.replace('#', ''), 16) : 0x5865F2;
+  const embed = new EmbedBuilder()
+    .setTitle(panelData.panelEmbed?.title || '🎫 Server Support Desk')
+    .setDescription(panelData.panelEmbed?.description || 'Select a department below to open a ticket.')
+    .setColor(isNaN(colorInt) ? 0x5865F2 : colorInt)
+    .setFooter({ text: panelData.panelEmbed?.footer || 'Tickets are handled privately with staff' })
+    .setTimestamp();
+
+  if (panelData.panelEmbed?.bannerUrl) embed.setImage(panelData.panelEmbed.bannerUrl);
+
+  const components = [];
+  const styleMap = {
+    'Primary': ButtonStyle.Primary,
+    'Secondary': ButtonStyle.Secondary,
+    'Success': ButtonStyle.Success,
+    'Danger': ButtonStyle.Danger
+  };
+
+  if (panelData.selectorStyle === 'dropdown' || categories.length > 5) {
+    const select = new StringSelectMenuBuilder()
+      .setCustomId('ticket_select_category')
+      .setPlaceholder('Choose a department to open a ticket...')
+      .addOptions(
+        categories.slice(0, 25).map(c => ({
+          label: c.name.substring(0, 100),
+          description: (c.description || `Open a ${c.name} ticket`).substring(0, 100),
+          value: c.id,
+          emoji: c.emoji || undefined
+        }))
+      );
+    components.push(new ActionRowBuilder().addComponents(select));
+  } else {
+    const buttons = categories.slice(0, 5).map(cat => {
+      const btn = new ButtonBuilder()
+        .setCustomId(`ticket_create:${cat.id}`)
+        .setLabel(cat.name)
+        .setStyle(styleMap[cat.buttonColor] || ButtonStyle.Primary);
+      if (cat.emoji) btn.setEmoji(cat.emoji);
+      return btn;
+    });
+    components.push(new ActionRowBuilder().addComponents(buttons));
+  }
+
+  if (client?.guilds?.cache) {
+    const guild = client.guilds.cache.get(guildId);
+    const channel = guild?.channels.cache.get(channelId);
+    if (channel && channel.isTextBased()) {
+      const msg = await channel.send({ embeds: [embed], components });
+      return { id: msg.id, channelId: channel.id };
+    }
+  }
+
+  const rest = getRest();
+  if (!rest) throw new Error('Bot token is not configured.');
+  const rawMsg = await rest.post(Routes.channelMessages(channelId), {
+    body: {
+      embeds: [embed.toJSON()],
+      components: components.map(c => c.toJSON())
+    }
+  });
+  return { id: rawMsg.id, channelId };
+}
+
+/**
+ * Publish an interactive Application Panel to Discord
+ */
+async function publishApplicationPanel(guildId, channelId, form) {
+  const client = getClientForGuild(guildId);
+  const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+  const embedCfg = form.panelEmbed || {};
+  const colorInt = embedCfg.color ? parseInt(embedCfg.color.replace('#', ''), 16) : 0x5865F2;
+
+  const embed = new EmbedBuilder()
+    .setTitle(embedCfg.title || `🛡️ ${form.name}`)
+    .setDescription(embedCfg.description || form.description || 'Click the button below to submit your application.')
+    .setColor(isNaN(colorInt) ? 0x5865F2 : colorInt)
+    .setFooter({ text: 'Applications are reviewed privately by server leadership' })
+    .setTimestamp();
+
+  if (embedCfg.bannerUrl) embed.setImage(embedCfg.bannerUrl);
+
+  const button = new ButtonBuilder()
+    .setCustomId(`app_apply:${form.id}`)
+    .setLabel(embedCfg.buttonText || 'Apply Now')
+    .setStyle(ButtonStyle.Primary)
+    .setDisabled(!form.isOpen);
+
+  const components = [new ActionRowBuilder().addComponents(button)];
+
+  if (client?.guilds?.cache) {
+    const guild = client.guilds.cache.get(guildId);
+    const channel = guild?.channels.cache.get(channelId);
+    if (channel && channel.isTextBased()) {
+      const msg = await channel.send({ embeds: [embed], components });
+      return { id: msg.id, channelId: channel.id };
+    }
+  }
+
+  const rest = getRest();
+  if (!rest) throw new Error('Bot token is not configured.');
+  const rawMsg = await rest.post(Routes.channelMessages(channelId), {
+    body: {
+      embeds: [embed.toJSON()],
+      components: components.map(c => c.toJSON())
+    }
+  });
+  return { id: rawMsg.id, channelId };
+}
+
+/**
+ * Update published Application Panel button when isOpen toggles
+ */
+async function updateApplicationPanelMessage(guildId, channelId, messageId, form) {
+  try {
+    const client = getClientForGuild(guildId);
+    const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+    const embedCfg = form.panelEmbed || {};
+
+    const button = new ButtonBuilder()
+      .setCustomId(`app_apply:${form.id}`)
+      .setLabel(form.isOpen ? (embedCfg.buttonText || 'Apply Now') : 'Applications Closed')
+      .setStyle(form.isOpen ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setDisabled(!form.isOpen);
+
+    const components = [new ActionRowBuilder().addComponents(button)];
+
+    if (client?.guilds?.cache) {
+      const guild = client.guilds.cache.get(guildId);
+      const channel = guild?.channels.cache.get(channelId);
+      if (channel && channel.isTextBased()) {
+        const msg = await channel.messages.fetch(messageId).catch(() => null);
+        if (msg) {
+          await msg.edit({ components }).catch(() => {});
+          return;
+        }
+      }
+    }
+
+    const rest = getRest();
+    if (rest) {
+      await rest.patch(Routes.channelMessage(channelId, messageId), {
+        body: { components: components.map(c => c.toJSON()) }
+      }).catch(() => {});
+    }
+  } catch {}
+}
+
 module.exports = {
   setInProcessClient,
   getInProcessClient: () => inProcessClient,
@@ -296,5 +475,8 @@ module.exports = {
   getGuildRoles,
   getGuildDetails,
   publishReactionPanel,
-  sendEmbedAnnouncement
+  sendEmbedAnnouncement,
+  publishTicketPanel,
+  publishApplicationPanel,
+  updateApplicationPanelMessage
 };

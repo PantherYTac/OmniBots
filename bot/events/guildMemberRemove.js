@@ -32,18 +32,52 @@ module.exports = {
       }
     }
 
-    // 2. Farewell Message
-    if (guildSettings.farewell?.enabled && guildSettings.farewell?.channelId) {
+    // 2. Farewell & Invite Announcer Messages
+    const inviterTag = leaveData?.inviterUser ? leaveData.inviterUser.tag : (leaveData?.inviterId ? `User (${leaveData.inviterId})` : 'Direct / Unknown');
+    const inviterCount = leaveData?.updatedRecord?.total != null ? leaveData.updatedRecord.total.toString() : '0';
+
+    // 2a. Upgraded Invite Tracker Leave Announcer
+    const inviteConf = guildSettings.inviteTracking || {};
+    const leaveChanId = inviteConf.leaveChannelId;
+    if (inviteConf.enabled !== false && leaveChanId) {
       try {
-        const leaveChan = member.guild.channels.cache.get(guildSettings.farewell.channelId);
+        const leaveChan = member.guild.channels.cache.get(leaveChanId);
         if (leaveChan && leaveChan.isTextBased()) {
+          const defaultDesc = '**{user.tag}** has left the server.\nInvited by **{inviter.tag}** — they now have **{inviter.invites}** invites.';
+          const rawDesc = inviteConf.leaveEmbed?.description || defaultDesc;
+          const desc = rawDesc
+            .replace(/\{user\}/g, `**${member.user.tag}**`)
+            .replace(/\{user\.tag\}/g, member.user.tag)
+            .replace(/\{server\}/g, member.guild.name)
+            .replace(/\{member_count\}/g, member.guild.memberCount.toString())
+            .replace(/\{inviter\}/g, inviterTag)
+            .replace(/\{inviter\.tag\}/g, inviterTag)
+            .replace(/\{inviter\.invites\}/g, inviterCount);
+
+          const embed = new EmbedBuilder()
+            .setDescription(desc)
+            .setColor(inviteConf.leaveEmbed?.color || '#EF4444')
+            .setTimestamp();
+
+          await leaveChan.send({ embeds: [embed] }).catch(() => {});
+        }
+      } catch (err) {
+        logger.error('Failed to send invite leave announcement', err, 'INVITES');
+      }
+    }
+
+    // 2b. Classic Farewell Message (if enabled on a separate channel or fallback)
+    if (guildSettings.farewell?.enabled && guildSettings.farewell?.channelId && guildSettings.farewell.channelId !== leaveChanId) {
+      try {
+        const farewellChan = member.guild.channels.cache.get(guildSettings.farewell.channelId);
+        if (farewellChan && farewellChan.isTextBased()) {
           const rawText = guildSettings.farewell.message || '{user} has left the server. Goodbye! 👋';
           const text = rawText
             .replace(/\{user\}/g, `**${member.user.tag}**`)
             .replace(/\{server\}/g, member.guild.name)
             .replace(/\{member_count\}/g, member.guild.memberCount.toString());
 
-          await leaveChan.send({ content: text }).catch(() => {});
+          await farewellChan.send({ content: text }).catch(() => {});
         }
       } catch (err) {
         logger.error('Failed to send farewell message', err, 'FAREWELL');

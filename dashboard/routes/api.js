@@ -6,7 +6,15 @@ const express = require('express');
 const router = express.Router();
 const { requireAdminAuth, canManageGuild } = require('../middleware/auth');
 const { db } = require('../../shared');
-const { publishReactionPanel, sendEmbedAnnouncement, getInProcessClient } = require('../middleware/botClient');
+const {
+  publishReactionPanel,
+  sendEmbedAnnouncement,
+  getInProcessClient,
+  publishTicketPanel,
+  publishApplicationPanel,
+  updateApplicationPanelMessage,
+  getClientForGuild
+} = require('../middleware/botClient');
 const { applySettings } = require('../../bot/utils/presenceManager');
 const { botManager } = require('../../bot/BotManager');
 const logger = require('../../shared/utils/logger');
@@ -115,6 +123,136 @@ router.post('/guilds/:guildId/tickets', requireAdminAuth, canManageGuild, async 
 
   await db.guilds.update(guildId, { tickets });
   return res.json({ success: true, message: 'Support ticket settings saved!' });
+});
+
+// 5b. Ticket Categories CRUD
+router.post('/guilds/:guildId/tickets/categories', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+    const {
+      id,
+      name,
+      emoji,
+      description,
+      buttonColor,
+      discordCategoryId,
+      closedCategoryId,
+      channelNamePattern,
+      supportRoleIds,
+      modalQuestions,
+      welcomeEmbed,
+      maxOpenPerUser,
+      autoCloseInactiveHours
+    } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Category name is required.' });
+    }
+
+    const catId = id || `cat_${Date.now()}`;
+    const saved = await db.ticketCategories.save(catId, {
+      guildId,
+      name: name.trim(),
+      emoji: emoji || '🎫',
+      description: description || '',
+      buttonColor: buttonColor || 'Primary',
+      discordCategoryId: discordCategoryId || '',
+      closedCategoryId: closedCategoryId || '',
+      channelNamePattern: channelNamePattern || 'ticket-{category}-{username}-{count}',
+      supportRoleIds: Array.isArray(supportRoleIds) ? supportRoleIds : (supportRoleIds ? [supportRoleIds] : []),
+      modalQuestions: typeof modalQuestions === 'string' ? JSON.parse(modalQuestions) : (modalQuestions || []),
+      welcomeEmbed: typeof welcomeEmbed === 'string' ? JSON.parse(welcomeEmbed) : (welcomeEmbed || {}),
+      maxOpenPerUser: parseInt(maxOpenPerUser, 10) || 1,
+      autoCloseInactiveHours: parseInt(autoCloseInactiveHours, 10) || 0
+    });
+
+    return res.json({ success: true, message: 'Category saved successfully!', category: saved });
+  } catch (err) {
+    logger.error('Failed to save ticket category', err, 'API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to save ticket category.' });
+  }
+});
+
+router.delete('/guilds/:guildId/tickets/categories/:id', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    await db.ticketCategories.delete(req.params.id);
+    return res.json({ success: true, message: 'Category deleted successfully!' });
+  } catch (err) {
+    logger.error('Failed to delete ticket category', err, 'API');
+    return res.status(500).json({ success: false, error: 'Failed to delete category.' });
+  }
+});
+
+// 5c. Ticket Panels CRUD & Discord Publisher
+router.post('/guilds/:guildId/tickets/panels', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+    const { id, title, description, color, bannerUrl, selectorStyle, categoryIds } = req.body;
+
+    const panelId = id || `panel_${Date.now()}`;
+    const saved = await db.ticketPanels.save(panelId, {
+      guildId,
+      selectorStyle: selectorStyle || 'buttons',
+      panelEmbed: {
+        title: title || '🎫 Server Support Desk',
+        description: description || 'Select a department below to open a ticket.',
+        color: color || '#5865F2',
+        bannerUrl: bannerUrl || '',
+        footer: 'Tickets are handled privately with staff'
+      },
+      categoryIds: Array.isArray(categoryIds) ? categoryIds : (categoryIds ? [categoryIds] : [])
+    });
+
+    return res.json({ success: true, message: 'Ticket panel configuration saved!', panel: saved });
+  } catch (err) {
+    logger.error('Failed to save ticket panel', err, 'API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to save panel.' });
+  }
+});
+
+router.delete('/guilds/:guildId/tickets/panels/:id', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    await db.ticketPanels.delete(req.params.id);
+    return res.json({ success: true, message: 'Ticket panel deleted successfully!' });
+  } catch (err) {
+    logger.error('Failed to delete ticket panel', err, 'API');
+    return res.status(500).json({ success: false, error: 'Failed to delete panel.' });
+  }
+});
+
+router.post('/guilds/:guildId/tickets/publish-panel', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+    const { panelId, channelId } = req.body;
+
+    if (!panelId || !channelId) {
+      return res.status(400).json({ success: false, error: 'Panel ID and target Channel ID are required.' });
+    }
+
+    const panel = await db.ticketPanels.get(panelId);
+    if (!panel) return res.status(404).json({ success: false, error: 'Panel configuration not found.' });
+
+    const allCategories = await db.ticketCategories.list(guildId);
+    const categoriesToPublish = Array.isArray(panel.categoryIds) && panel.categoryIds.length > 0
+      ? allCategories.filter(c => panel.categoryIds.includes(c.id))
+      : allCategories;
+
+    if (categoriesToPublish.length === 0) {
+      return res.status(400).json({ success: false, error: 'No ticket categories assigned to this panel.' });
+    }
+
+    const published = await publishTicketPanel(guildId, channelId, panel, categoriesToPublish);
+
+    await db.ticketPanels.save(panelId, {
+      channelId,
+      messageId: published.id
+    });
+
+    return res.json({ success: true, message: 'Ticket panel published live to Discord!', messageId: published.id });
+  } catch (err) {
+    logger.error('Failed to publish ticket panel to Discord', err, 'API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to post ticket panel to Discord.' });
+  }
 });
 
 // 6. Publish Reaction & Button Role Panel to Discord
@@ -309,11 +447,39 @@ router.post('/guilds/:guildId/invites/settings', requireAdminAuth, canManageGuil
     const minAccountAgeDays = Math.max(0, parseInt(req.body.minAccountAgeDays, 10) || 7);
     const subtractLeaves = req.body.subtractLeaves === true || req.body.subtractLeaves === 'true' || req.body.subtractLeaves === 'on';
 
+    const joinChannelId = req.body.joinChannelId !== undefined ? req.body.joinChannelId : (current.inviteTracking?.joinChannelId || '');
+    const joinCardEnabled = req.body.joinCardEnabled === true || req.body.joinCardEnabled === 'true' || req.body.joinCardEnabled === 'on';
+    const joinAccentColor = req.body.joinAccentColor || current.inviteTracking?.joinAccentColor || '#5865F2';
+    const joinGradientStart = req.body.joinGradientStart || current.inviteTracking?.joinGradientStart || '#0B0E14';
+    const joinGradientEnd = req.body.joinGradientEnd || current.inviteTracking?.joinGradientEnd || '#131823';
+
+    const joinEmbed = {
+      author: req.body.joinAuthor || current.inviteTracking?.joinEmbed?.author || 'New Member Arrived!',
+      description: req.body.joinDescription || current.inviteTracking?.joinEmbed?.description ||
+        'Welcome {user} (**{user.tag}**) to **{server}**!\n\n📨 **Invited by:** {inviter} (**{inviter.tag}**)\n🏆 **Inviter Total:** **{inviter.invites}** invites (`{invite.code}`)\n👥 **Member Count:** #{member_count}',
+      color: joinAccentColor
+    };
+
+    const leaveChannelId = req.body.leaveChannelId !== undefined ? req.body.leaveChannelId : (current.inviteTracking?.leaveChannelId || '');
+    const leaveEmbed = {
+      description: req.body.leaveDescription || current.inviteTracking?.leaveEmbed?.description ||
+        '**{user.tag}** has left the server.\nInvited by **{inviter.tag}** — they now have **{inviter.invites}** invites.',
+      color: req.body.leaveColor || current.inviteTracking?.leaveEmbed?.color || '#EF4444'
+    };
+
     const inviteTracking = {
       ...(current.inviteTracking || {}),
       enabled,
       minAccountAgeDays,
-      subtractLeaves
+      subtractLeaves,
+      joinChannelId,
+      joinCardEnabled,
+      joinAccentColor,
+      joinGradientStart,
+      joinGradientEnd,
+      joinEmbed,
+      leaveChannelId,
+      leaveEmbed
     };
 
     const modules = {
@@ -437,6 +603,221 @@ router.post('/bot/legal/reset', requireAdminAuth, async (req, res) => {
   } catch (err) {
     logger.error('Failed to reset legal documents', err, 'LEGAL_API');
     return res.status(500).json({ success: false, error: 'Internal error resetting legal documents.' });
+  }
+});
+
+// 15b. Staff & Community Applications API
+router.post('/guilds/:guildId/applications/forms', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+    const {
+      id,
+      name,
+      description,
+      isOpen,
+      title,
+      color,
+      buttonText,
+      bannerUrl,
+      reviewChannelId,
+      questions,
+      requiredRoleIds,
+      blockedRoleIds,
+      minAccountAgeDays,
+      minServerDays,
+      reapplyCooldownHours,
+      acceptRoleIds,
+      removeRoleIds,
+      acceptDmTitle,
+      acceptDmDesc,
+      acceptDmColor,
+      denyDmTitle,
+      denyDmDesc,
+      denyDmColor
+    } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Application position title is required.' });
+    }
+
+    const formId = id || `form_${Date.now()}`;
+    const saved = await db.applicationForms.save(formId, {
+      guildId,
+      name: name.trim(),
+      description: description || '',
+      isOpen: isOpen !== false && isOpen !== 'false',
+      panelEmbed: {
+        title: title || `🛡️ ${name.trim()}`,
+        description: description || 'Click below to submit your application.',
+        color: color || '#5865F2',
+        buttonText: buttonText || 'Apply Now',
+        bannerUrl: bannerUrl || ''
+      },
+      reviewChannelId: reviewChannelId || '',
+      questions: typeof questions === 'string' ? JSON.parse(questions) : (questions || []),
+      requiredRoleIds: Array.isArray(requiredRoleIds) ? requiredRoleIds : (requiredRoleIds ? [requiredRoleIds] : []),
+      blockedRoleIds: Array.isArray(blockedRoleIds) ? blockedRoleIds : (blockedRoleIds ? [blockedRoleIds] : []),
+      minAccountAgeDays: parseInt(minAccountAgeDays, 10) || 0,
+      minServerDays: parseInt(minServerDays, 10) || 0,
+      reapplyCooldownHours: parseInt(reapplyCooldownHours, 10) || 24,
+      acceptRoleIds: Array.isArray(acceptRoleIds) ? acceptRoleIds : (acceptRoleIds ? [acceptRoleIds] : []),
+      removeRoleIds: Array.isArray(removeRoleIds) ? removeRoleIds : (removeRoleIds ? [removeRoleIds] : []),
+      acceptDmEmbed: {
+        title: acceptDmTitle || '🎉 Application Accepted!',
+        description: acceptDmDesc || 'Congratulations! Your application has been accepted.',
+        color: acceptDmColor || '#57F287'
+      },
+      denyDmEmbed: {
+        title: denyDmTitle || 'Application Update',
+        description: denyDmDesc || 'Thank you for your interest. Unfortunately your application was not accepted at this time.',
+        color: denyDmColor || '#ED4245'
+      }
+    });
+
+    return res.json({ success: true, message: 'Application form saved successfully!', form: saved });
+  } catch (err) {
+    logger.error('Failed to save application form', err, 'API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to save application form.' });
+  }
+});
+
+router.post('/guilds/:guildId/applications/forms/:formId/toggle', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const { guildId, formId } = req.params;
+    const form = await db.applicationForms.get(formId);
+    if (!form) return res.status(404).json({ success: false, error: 'Form not found.' });
+
+    const newIsOpen = !form.isOpen;
+    const updated = await db.applicationForms.save(formId, { isOpen: newIsOpen });
+
+    // Live update published panel button if available
+    if (form.panelChannelId && form.panelMessageId) {
+      await updateApplicationPanelMessage(guildId, form.panelChannelId, form.panelMessageId, updated);
+    }
+
+    return res.json({ success: true, message: `Application status toggled to: ${newIsOpen ? 'OPEN' : 'CLOSED'}`, isOpen: newIsOpen });
+  } catch (err) {
+    logger.error('Failed to toggle application form status', err, 'API');
+    return res.status(500).json({ success: false, error: 'Failed to toggle status.' });
+  }
+});
+
+router.delete('/guilds/:guildId/applications/forms/:formId', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    await db.applicationForms.delete(req.params.formId);
+    return res.json({ success: true, message: 'Application position deleted.' });
+  } catch (err) {
+    logger.error('Failed to delete application form', err, 'API');
+    return res.status(500).json({ success: false, error: 'Failed to delete form.' });
+  }
+});
+
+router.post('/guilds/:guildId/applications/publish-panel', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+    const { formId, channelId } = req.body;
+
+    if (!formId || !channelId) {
+      return res.status(400).json({ success: false, error: 'Form ID and Channel ID are required.' });
+    }
+
+    const form = await db.applicationForms.get(formId);
+    if (!form) return res.status(404).json({ success: false, error: 'Form configuration not found.' });
+
+    const published = await publishApplicationPanel(guildId, channelId, form);
+
+    await db.applicationForms.save(formId, {
+      panelChannelId: channelId,
+      panelMessageId: published.id
+    });
+
+    return res.json({ success: true, message: 'Application panel published live to Discord!', messageId: published.id });
+  } catch (err) {
+    logger.error('Failed to publish application panel to Discord', err, 'API');
+    return res.status(500).json({ success: false, error: err.message || 'Failed to post panel to Discord.' });
+  }
+});
+
+router.post('/guilds/:guildId/applications/submissions/:subId/status', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    const { guildId, subId } = req.params;
+    const { status, note } = req.body;
+
+    if (!['accepted', 'denied'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Status must be accepted or denied.' });
+    }
+
+    const submission = await db.applicationSubmissions.get(subId);
+    if (!submission) return res.status(404).json({ success: false, error: 'Submission not found.' });
+
+    const form = await db.applicationForms.get(submission.formId);
+    const client = getClientForGuild(guildId);
+    const guild = client?.guilds?.cache?.get(guildId);
+    const applicantMember = guild ? await guild.members.fetch(submission.applicantId).catch(() => null) : null;
+
+    if (status === 'accepted') {
+      if (applicantMember && form) {
+        if (Array.isArray(form.acceptRoleIds)) {
+          for (const roleId of form.acceptRoleIds) {
+            if (guild.roles.cache.has(roleId)) await applicantMember.roles.add(roleId).catch(() => {});
+          }
+        }
+        if (Array.isArray(form.removeRoleIds)) {
+          for (const roleId of form.removeRoleIds) {
+            if (guild.roles.cache.has(roleId)) await applicantMember.roles.remove(roleId).catch(() => {});
+          }
+        }
+      }
+
+      if (applicantMember) {
+        try {
+          const { EmbedBuilder } = require('discord.js');
+          const dmCfg = form?.acceptDmEmbed || {};
+          const dmEmbed = new EmbedBuilder()
+            .setTitle(dmCfg.title || '🎉 Application Accepted!')
+            .setColor(dmCfg.color || '#57F287')
+            .setDescription(`${dmCfg.description || 'Congratulations! Your application has been accepted.'}\n\n**Note from Staff:**\n> ${note || 'Welcome to the team!'}`)
+            .setTimestamp();
+          await applicantMember.send({ embeds: [dmEmbed] }).catch(() => {});
+        } catch {}
+      }
+    } else {
+      if (applicantMember) {
+        try {
+          const { EmbedBuilder } = require('discord.js');
+          const dmCfg = form?.denyDmEmbed || {};
+          const dmEmbed = new EmbedBuilder()
+            .setTitle(dmCfg.title || 'Application Update')
+            .setColor(dmCfg.color || '#ED4245')
+            .setDescription(`${dmCfg.description || 'Thank you for your interest. Unfortunately your application was not accepted at this time.'}\n\n**Reason:**\n> ${note || 'Rejected by staff.'}`)
+            .setTimestamp();
+          await applicantMember.send({ embeds: [dmEmbed] }).catch(() => {});
+        } catch {}
+      }
+    }
+
+    await db.applicationSubmissions.update(subId, {
+      status,
+      reviewedBy: 'web_admin',
+      reviewedByTag: 'Dashboard Admin',
+      reviewNote: note || '',
+      reviewedAt: Date.now()
+    });
+
+    return res.json({ success: true, message: `Submission marked as ${status.toUpperCase()}!` });
+  } catch (err) {
+    logger.error('Failed to update submission status', err, 'API');
+    return res.status(500).json({ success: false, error: 'Failed to update submission status.' });
+  }
+});
+
+router.delete('/guilds/:guildId/applications/submissions/:subId', requireAdminAuth, canManageGuild, async (req, res) => {
+  try {
+    await db.applicationSubmissions.delete(req.params.subId);
+    return res.json({ success: true, message: 'Submission deleted.' });
+  } catch (err) {
+    logger.error('Failed to delete submission', err, 'API');
+    return res.status(500).json({ success: false, error: 'Failed to delete submission.' });
   }
 });
 

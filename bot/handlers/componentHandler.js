@@ -17,6 +17,19 @@ const {
 const { db } = require('../../shared');
 const logger = require('../../shared/utils/logger');
 const { generateHtmlTranscript } = require('../utils/transcriptGenerator');
+const {
+  handleTicketCategoryClick,
+  handleTicketModalSubmit,
+  handleTicketButtonAction,
+  handleTicketCloseModal
+} = require('./ticketHandler');
+const {
+  startApplication,
+  handleApplicationModalSubmit,
+  handleDmInterviewInteraction,
+  handleStaffReviewAction,
+  handleStaffDecisionModal
+} = require('./applicationHandler');
 
 async function handleInteraction(interaction) {
   // 1. Handle Buttons & Select Menus
@@ -88,180 +101,51 @@ async function handleInteraction(interaction) {
       }
     }
 
-    // --- B. TICKET CREATION (ticket_create:category) ---
+    // --- B. TICKET INTERACTIONS ---
     if (customId.startsWith('ticket_create:')) {
-      const categoryKey = customId.split(':')[1] || 'general';
-      const guild = interaction.guild;
-      const user = interaction.user;
-
-      const guildSettings = await db.guilds.get(guild.id);
-      const ticketsConfig = guildSettings.tickets || {};
-
-      // Check for already existing open ticket for this user in this guild
-      const openTickets = await db.tickets.list(guild.id);
-      const existing = openTickets.find(t => t.userId === user.id && t.status === 'open');
-      if (existing) {
-        const existingChan = guild.channels.cache.get(existing.channelId);
-        if (existingChan) {
-          return interaction.reply({ content: `⚠️ You already have an open ticket in ${existingChan}!`, ephemeral: true });
-        }
-      }
-
-      await interaction.deferReply({ ephemeral: true });
-
-      try {
-        const ticketId = `ticket-${Date.now().toString().substring(7)}`;
-        const channelName = `ticket-${user.username.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}`;
-
-        const supportRoleId = ticketsConfig.supportRoleId;
-        const permissionOverwrites = [
-          {
-            id: guild.id,
-            deny: [PermissionsBitField.Flags.ViewChannel]
-          },
-          {
-            id: user.id,
-            allow: [
-              PermissionsBitField.Flags.ViewChannel,
-              PermissionsBitField.Flags.SendMessages,
-              PermissionsBitField.Flags.ReadMessageHistory,
-              PermissionsBitField.Flags.AttachFiles
-            ]
-          },
-          {
-            id: guild.client.user.id,
-            allow: [
-              PermissionsBitField.Flags.ViewChannel,
-              PermissionsBitField.Flags.SendMessages,
-              PermissionsBitField.Flags.ManageChannels,
-              PermissionsBitField.Flags.ReadMessageHistory
-            ]
-          }
-        ];
-
-        if (supportRoleId && guild.roles.cache.has(supportRoleId)) {
-          permissionOverwrites.push({
-            id: supportRoleId,
-            allow: [
-              PermissionsBitField.Flags.ViewChannel,
-              PermissionsBitField.Flags.SendMessages,
-              PermissionsBitField.Flags.ReadMessageHistory
-            ]
-          });
-        }
-
-        const channel = await guild.channels.create({
-          name: channelName,
-          type: ChannelType.GuildText,
-          parent: ticketsConfig.categoryId || undefined,
-          permissionOverwrites
-        });
-
-        const ticketDoc = await db.tickets.create({
-          id: ticketId,
-          guildId: guild.id,
-          channelId: channel.id,
-          userId: user.id,
-          userName: user.tag,
-          category: categoryKey,
-          status: 'open',
-          claimedBy: null
-        });
-
-        // Send initial controls embed in ticket channel
-        const welcomeEmbed = new EmbedBuilder()
-          .setTitle(`🎫 Ticket: ${categoryKey.toUpperCase()}`)
-          .setDescription(`Hello ${user}, thank you for reaching out!\nA staff member will be with you shortly. Please describe your inquiry in detail.`)
-          .setColor('#5865F2')
-          .addFields(
-            { name: 'Created By', value: `${user.tag} (${user.id})`, inline: true },
-            { name: 'Category', value: categoryKey, inline: true },
-            { name: 'Status', value: '🟢 Open', inline: true }
-          )
-          .setTimestamp();
-
-        const controlRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`ticket_claim:${ticketId}`).setLabel('Claim Ticket').setEmoji('🙋‍♂️').setStyle(ButtonStyle.Success),
-          new ButtonBuilder().setCustomId(`ticket_close:${ticketId}`).setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger)
-        );
-
-        await channel.send({ content: `${user} ${supportRoleId ? `<@&${supportRoleId}>` : ''}`, embeds: [welcomeEmbed], components: [controlRow] });
-
-        return interaction.editReply({ content: `✅ Ticket created: ${channel}` });
-      } catch (err) {
-        logger.error('Failed to create ticket channel', err, 'TICKETS');
-        return interaction.editReply({ content: '❌ Failed to create ticket channel. Check bot permissions.' });
-      }
+      const categoryId = customId.split(':')[1] || 'general';
+      return handleTicketCategoryClick(interaction, categoryId);
     }
 
-    // --- C. TICKET CLAIM (ticket_claim:ticketId) ---
-    if (customId.startsWith('ticket_claim:')) {
-      const ticketId = customId.split(':')[1];
-      const ticket = await db.tickets.get(ticketId);
-      if (!ticket) {
-        return interaction.reply({ content: '❌ Ticket record not found.', ephemeral: true });
-      }
-
-      await db.tickets.update(ticketId, { claimedBy: interaction.user.tag });
-
-      const claimEmbed = new EmbedBuilder()
-        .setColor('#57F287')
-        .setDescription(`🙋‍♂️ **Ticket Claimed:** ${interaction.user} will be assisting with this ticket.`);
-
-      await interaction.reply({ embeds: [claimEmbed] });
-      return;
+    if (customId === 'ticket_select_category' && interaction.isStringSelectMenu()) {
+      const categoryId = interaction.values[0];
+      return handleTicketCategoryClick(interaction, categoryId);
     }
 
-    // --- D. TICKET CLOSE & HTML TRANSCRIPT EXPORT (ticket_close:ticketId) ---
-    if (customId.startsWith('ticket_close:')) {
-      const ticketId = customId.split(':')[1];
-      const ticket = await db.tickets.get(ticketId);
-      if (!ticket) {
-        return interaction.reply({ content: '❌ Ticket record not found.', ephemeral: true });
-      }
+    if (
+      customId.startsWith('ticket_claim:') ||
+      customId.startsWith('ticket_lock:') ||
+      customId.startsWith('ticket_close_prompt:') ||
+      customId.startsWith('ticket_close_confirm:') ||
+      customId.startsWith('ticket_close_cancel:') ||
+      customId.startsWith('ticket_close_reason_btn:') ||
+      customId.startsWith('ticket_delete:')
+    ) {
+      return handleTicketButtonAction(interaction);
+    }
 
-      await interaction.reply({ content: '🔒 **Generating HTML transcript and closing ticket in 5 seconds...**' });
+    // --- C. STAFF & COMMUNITY APPLICATIONS ---
+    if (customId.startsWith('app_apply:')) {
+      const formId = customId.split(':')[1];
+      return startApplication(interaction, formId);
+    }
 
-      try {
-        const transcriptHtml = await generateHtmlTranscript(interaction.channel, ticket, interaction.guild);
+    if (customId === 'app_select_position' && interaction.isStringSelectMenu()) {
+      const formId = interaction.values[0];
+      return startApplication(interaction, formId);
+    }
 
-        await db.tickets.update(ticketId, {
-          status: 'closed',
-          closedBy: interaction.user.tag,
-          closedAt: Date.now(),
-          transcriptHtml
-        });
+    if (
+      customId.startsWith('app_vote:') ||
+      customId.startsWith('app_accept_prompt:') ||
+      customId.startsWith('app_deny_prompt:') ||
+      customId.startsWith('app_interview:')
+    ) {
+      return handleStaffReviewAction(interaction);
+    }
 
-        // Log transcript to configured log channel
-        const guildSettings = await db.guilds.get(interaction.guild.id);
-        const logChanId = guildSettings.tickets?.logChannelId || guildSettings.logging?.logChannelId;
-        if (logChanId) {
-          const logChan = interaction.guild.channels.cache.get(logChanId);
-          if (logChan && logChan.isTextBased()) {
-            const logEmbed = new EmbedBuilder()
-              .setTitle('📁 Ticket Closed & Archived')
-              .setColor('#ED4245')
-              .addFields(
-                { name: 'Ticket ID', value: ticketId, inline: true },
-                { name: 'User', value: `${ticket.userName} (<@${ticket.userId}>)`, inline: true },
-                { name: 'Closed By', value: `${interaction.user.tag}`, inline: true },
-                { name: 'Dashboard View', value: `Available in web dashboard under Tickets module`, inline: false }
-              )
-              .setTimestamp();
-
-            await logChan.send({ embeds: [logEmbed] }).catch(() => {});
-          }
-        }
-
-        // Wait 5 seconds and delete channel
-        setTimeout(async () => {
-          await interaction.channel.delete('Ticket closed').catch(() => {});
-        }, 5000);
-
-      } catch (err) {
-        logger.error('Failed to close ticket & export transcript', err, 'TICKETS');
-      }
-      return;
+    if (customId === 'app_dm_cancel' || customId.startsWith('app_dm_choice:')) {
+      return handleDmInterviewInteraction(interaction);
     }
 
     // --- E. VERIFICATION GATE (verify_gate:verify) ---
@@ -429,6 +313,22 @@ async function handleInteraction(interaction) {
   // 2. Handle Modals
   if (interaction.isModalSubmit()) {
     const customId = interaction.customId;
+
+    // Tickets Modals
+    if (customId.startsWith('ticket_modal:')) {
+      return handleTicketModalSubmit(interaction);
+    }
+    if (customId.startsWith('ticket_close_modal:')) {
+      return handleTicketCloseModal(interaction);
+    }
+
+    // Applications Modals
+    if (customId.startsWith('app_modal:')) {
+      return handleApplicationModalSubmit(interaction);
+    }
+    if (customId.startsWith('app_accept_modal:') || customId.startsWith('app_deny_modal:')) {
+      return handleStaffDecisionModal(interaction);
+    }
 
     if (customId.startsWith('modal_vc_limit:')) {
       const channelId = customId.split(':')[1];

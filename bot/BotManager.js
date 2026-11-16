@@ -131,8 +131,10 @@ class BotManager {
 
       logger.success(`Bot [${displayName}] logged in as ${client.user.tag} (ID: ${client.user.id})`, 'BOT_MANAGER');
 
-      // Auto-Sync Slash Commands with Discord Global API
-      await this.syncSlashCommands(botId, token);
+      // Auto-Sync Slash Commands asynchronously in background (never blocks HTTP response)
+      this.syncSlashCommands(botId, token).catch(syncErr => {
+        logger.warn(`Background slash command sync warning for [${displayName}]: ${syncErr.message}`, 'BOT_MANAGER');
+      });
 
       // Apply initial presence settings
       try {
@@ -162,20 +164,28 @@ class BotManager {
       if (errMsg.includes('disallowed intents') || errMsg.includes('Privileged intent') || err.code === 'DisallowedIntents') {
         meta.hasIntentError = true;
         meta.intentErrorMessage = 'Missing Privileged Gateway Intents! Please turn ON "Message Content Intent", "Server Members Intent", and "Presence Intent" in the Discord Developer Portal under the Bot tab.';
+        meta.status = 'intent_warning';
+      } else {
+        meta.status = 'error';
+        meta.lastError = errMsg;
       }
-
-      meta.status = 'error';
-      meta.lastError = errMsg;
 
       await db.managedBots.save(botId, {
         id: botId,
         name: displayName,
-        status: 'error',
+        status: meta.status,
         hasIntentError: meta.hasIntentError,
         lastError: meta.intentErrorMessage || errMsg
       });
 
-      return null;
+      return {
+        id: botId,
+        name: displayName,
+        status: meta.status,
+        hasIntentError: meta.hasIntentError,
+        intentErrorMessage: meta.intentErrorMessage,
+        lastError: errMsg
+      };
     }
   }
 

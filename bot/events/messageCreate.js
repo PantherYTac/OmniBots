@@ -18,7 +18,15 @@ const stickyTracker = new Map();
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
-    if (!message.guild || message.author.bot) return;
+    // 0. Handle DM Messages (Step-by-Step Application Interviews)
+    if (!message.guild) {
+      if (message.author.bot) return;
+      const { handleDmInterviewMessage } = require('../handlers/applicationHandler');
+      await handleDmInterviewMessage(message);
+      return;
+    }
+
+    if (message.author.bot) return;
 
     // AFK Check 1: If author was AFK, remove status upon sending message
     const authorAfkKey = `${message.guild.id}_${message.author.id}`;

@@ -157,21 +157,16 @@ async function requireAdminAuth(req, res, next) {
 
 /**
  * Guild Permission Middleware
- * Once authenticated with master admin credentials, allows managing any server where the bot is present.
+ * Once authenticated with master admin credentials, allows managing server modules smoothly.
  */
 async function canManageGuild(req, res, next) {
   const guildId = req.params.guildId;
-  const botActive = await isBotInGuild(guildId);
+  if (!guildId) return res.redirect('/dashboard');
 
-  if (!botActive) {
-    return res.status(404).render('error', {
-      status: 404,
-      message: `The Discord bot is not present in server ID "${guildId}". Please invite the bot first.`,
-      user: { username: configuredAdminUser }
-    });
-  }
+  const { getGuildDetails, isBotInGuild } = require('./botClient');
+  const details = await getGuildDetails(guildId).catch(() => null);
 
-  req.guild = { id: guildId, name: `Guild (${guildId})` };
+  req.guild = details || { id: guildId, name: `Server (${guildId})` };
   next();
 }
 
