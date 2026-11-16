@@ -4,10 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= typeof title !== 'undefined' ? `${title} • OmniBots` : 'OmniBots • All-in-One Multi-Bot Discord Platform' %></title>
-  
+
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
+
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -16,6 +21,9 @@
       darkMode: 'class',
       theme: {
         extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
+          },
           colors: {
             blurple: {
               DEFAULT: '#5865F2',
@@ -23,6 +31,12 @@
             },
             cyan: {
               accent: '#38BDF8'
+            },
+            emerald: {
+              DEFAULT: '#10B981'
+            },
+            amber: {
+              DEFAULT: '#F59E0B'
             },
             dark: {
               900: '#0B0E14',

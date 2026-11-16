@@ -1,0 +1,336 @@
+<!-- Modal: Discord OAuth2 / Bot Credentials Configuration -->
+<div id="oauth-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md hidden transition-opacity duration-200">
+  <div class="relative w-full max-w-lg bg-[#0D1117] border border-white/10 rounded-2xl shadow-2xl p-6 sm:p-7 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+
+    <!-- Modal Header -->
+    <div class="flex items-start justify-between border-b border-white/5 pb-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blurple/15 border border-blurple/30 text-blurple flex items-center justify-center flex-shrink-0">
+          <i data-lucide="link-2" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">Discord Account Linking (OAuth2)</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Link your Discord account to discover and invite bots to servers you manage.</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeOAuthModal()" class="text-slate-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Active Account Status (if linked) -->
+    <div id="modal-linked-status" class="hidden p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <div class="text-xs">
+          <span class="text-slate-400">Linked to Discord user: </span>
+          <strong id="modal-linked-user" class="text-white"></strong>
+        </div>
+      </div>
+      <button type="button" onclick="unlinkDiscordAccount()" class="text-[11px] font-semibold text-red-400 hover:text-red-300 px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition">
+        Unlink
+      </button>
+    </div>
+
+    <!-- Step 1: Redirect URL to copy -->
+    <div class="space-y-1.5">
+      <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+        <span>Step 1: Discord OAuth2 Redirect URL</span>
+        <span class="text-[10px] text-slate-500 lowercase font-normal">Add to Discord Developer Portal</span>
+      </label>
+      <div class="flex items-center gap-2">
+        <input 
+          type="text" 
+          id="oauth-redirect-uri" 
+          readonly 
+          class="w-full bg-[#0B0E14] border border-white/8 rounded-xl px-3.5 py-2 text-xs font-mono text-cyan-accent focus:outline-none"
+        >
+        <button 
+          type="button" 
+          onclick="copyRedirectUri()" 
+          id="copy-redirect-btn" 
+          class="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 flex-shrink-0 transition"
+        >
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>Copy</span>
+        </button>
+      </div>
+      <p class="text-[11px] text-slate-500">
+        In the <a href="https://discord.com/developers/applications" target="_blank" class="text-blurple hover:underline">Discord Developer Portal</a>, navigate to <strong>OAuth2 → General → Redirects</strong>, add this URL, and click <em>Save Changes</em>.
+      </p>
+    </div>
+
+    <!-- Connected Bot Quick-Select -->
+    <div id="quick-bot-wrapper" class="space-y-1.5 hidden">
+      <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        Autofill from Connected Bot
+      </label>
+      <select 
+        id="quick-bot-select" 
+        onchange="handleBotSelect(this.value)" 
+        class="w-full bg-[#0B0E14] border border-white/8 rounded-xl px-3.5 py-2 text-xs text-white focus:border-blurple/60 outline-none"
+      >
+        <option value="">-- Choose a connected bot to populate Client ID --</option>
+      </select>
+    </div>
+
+    <!-- Form: Client ID & Secret -->
+    <form id="oauth-credentials-form" onsubmit="saveOAuthCredentials(event)" class="space-y-4">
+      <div>
+        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+          Step 2: Bot Client ID (Application ID)
+        </label>
+        <input 
+          type="text" 
+          id="oauth-client-id" 
+          required 
+          placeholder="e.g. 112233445566778899" 
+          class="w-full bg-[#0B0E14] border border-white/8 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:border-blurple/60 focus:ring-1 focus:ring-blurple/30 outline-none transition font-mono"
+        >
+        <p class="text-[10px] text-slate-500 mt-1">Found in Discord Developer Portal under General Information → Application ID.</p>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+          Step 3: OAuth2 Client Secret
+        </label>
+        <div class="relative">
+          <input 
+            type="password" 
+            id="oauth-client-secret" 
+            placeholder="Enter Client Secret..." 
+            class="w-full bg-[#0B0E14] border border-white/8 rounded-xl px-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-600 focus:border-blurple/60 focus:ring-1 focus:ring-blurple/30 outline-none transition font-mono"
+          >
+          <button 
+            type="button" 
+            onclick="toggleSecretVisibility()" 
+            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300"
+          >
+            <i data-lucide="eye" id="secret-eye-icon" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-500 mt-1">Found under OAuth2 → General → Client Secret. Stored with AES-256-GCM encryption.</p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-white/5">
+        <button 
+          type="button" 
+          onclick="closeOAuthModal()" 
+          class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition"
+        >
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          id="save-oauth-btn" 
+          class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-white/10 hover:bg-white/15 border border-white/10 transition"
+        >
+          Save Credentials
+        </button>
+        <button 
+          type="button" 
+          onclick="saveAndConnectDiscord()" 
+          id="connect-discord-btn" 
+          class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blurple hover:bg-blurple-hover shadow-lg shadow-blurple/25 transition flex items-center gap-1.5"
+        >
+          <i data-lucide="link" class="w-3.5 h-3.5"></i>
+          <span>Save & Link Discord</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let currentOAuthConfig = null;
+let currentBots = [];
+
+function openOAuthModal() {
+  const modal = document.getElementById('oauth-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  loadOAuthConfig();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function closeOAuthModal() {
+  const modal = document.getElementById('oauth-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function loadOAuthConfig() {
+  try {
+    const res = await fetch('/api/oauth/config');
+    const data = await res.json();
+    if (!data.success) return;
+
+    currentOAuthConfig = data.config;
+    currentBots = data.availableBots || [];
+
+    // Populate Redirect URI
+    const redirInput = document.getElementById('oauth-redirect-uri');
+    if (redirInput) redirInput.value = data.config.redirectUri || data.config.defaultRedirectUri;
+
+    // Populate Client ID & Secret
+    const idInput = document.getElementById('oauth-client-id');
+    if (idInput && data.config.clientId) {
+      idInput.value = data.config.clientId;
+    }
+    const secretInput = document.getElementById('oauth-client-secret');
+    if (secretInput && data.config.hasSecret) {
+      secretInput.placeholder = '•••••••••••••••• (Secret Configured)';
+    }
+
+    // Populate Quick Bot selector
+    const botSelect = document.getElementById('quick-bot-select');
+    const botWrapper = document.getElementById('quick-bot-wrapper');
+    if (botSelect && botWrapper) {
+      if (currentBots.length > 0) {
+        botSelect.innerHTML = '<option value="">-- Choose a connected bot to populate Client ID --</option>' + 
+          currentBots.map(b => `<option value="${b.botId}">${b.username || b.tag || b.botId} (ID: ${b.botId})</option>`).join('');
+        botWrapper.classList.remove('hidden');
+      } else {
+        botWrapper.classList.add('hidden');
+      }
+    }
+
+    // Linked account status
+    const statusBox = document.getElementById('modal-linked-status');
+    const userDisplay = document.getElementById('modal-linked-user');
+    if (statusBox && userDisplay) {
+      if (data.isLinked && data.linkedAccount) {
+        userDisplay.textContent = `@${data.linkedAccount.username}`;
+        statusBox.classList.remove('hidden');
+      } else {
+        statusBox.classList.add('hidden');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load OAuth config:', err);
+  }
+}
+
+function handleBotSelect(botId) {
+  if (botId) {
+    const idInput = document.getElementById('oauth-client-id');
+    if (idInput) idInput.value = botId;
+  }
+}
+
+function copyRedirectUri() {
+  const input = document.getElementById('oauth-redirect-uri');
+  if (!input) return;
+  input.select();
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = document.getElementById('copy-redirect-btn');
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">Copied!</span>';
+      if (window.lucide) window.lucide.createIcons();
+      setTimeout(() => {
+        btn.innerHTML = orig;
+        if (window.lucide) window.lucide.createIcons();
+      }, 2000);
+    }
+  });
+}
+
+function toggleSecretVisibility() {
+  const input = document.getElementById('oauth-client-secret');
+  const icon = document.getElementById('secret-eye-icon');
+  if (!input) return;
+  const isPass = input.type === 'password';
+  input.type = isPass ? 'text' : 'password';
+  if (icon) {
+    icon.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+async function saveOAuthCredentials(e) {
+  if (e) e.preventDefault();
+  const clientId = document.getElementById('oauth-client-id')?.value.trim();
+  const clientSecret = document.getElementById('oauth-client-secret')?.value.trim();
+  const redirectUri = document.getElementById('oauth-redirect-uri')?.value.trim();
+
+  if (!clientId) {
+    showToast('Client ID is required.', 'error');
+    return false;
+  }
+
+  const saveBtn = document.getElementById('save-oauth-btn');
+  const origText = saveBtn ? saveBtn.textContent : '';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+  }
+
+  try {
+    const res = await fetch('/api/oauth/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, clientSecret, redirectUri })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Credentials saved successfully!', 'success');
+      setTimeout(() => window.location.reload(), 800);
+      return true;
+    } else {
+      showToast(data.error || 'Failed to save credentials', 'error');
+      return false;
+    }
+  } catch (err) {
+    showToast('Network error saving credentials', 'error');
+    return false;
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = origText;
+    }
+  }
+}
+
+async function saveAndConnectDiscord() {
+  const clientId = document.getElementById('oauth-client-id')?.value.trim();
+  const clientSecret = document.getElementById('oauth-client-secret')?.value.trim();
+  const redirectUri = document.getElementById('oauth-redirect-uri')?.value.trim();
+
+  if (!clientId) {
+    showToast('Please enter your Bot Client ID.', 'error');
+    return;
+  }
+
+  if (clientSecret || (currentOAuthConfig && currentOAuthConfig.hasSecret)) {
+    const ok = await saveOAuthCredentials();
+    if (ok !== false) {
+      window.location.href = '/auth/discord';
+    }
+  } else {
+    showToast('Please enter your OAuth2 Client Secret to connect.', 'error');
+  }
+}
+
+async function unlinkDiscordAccount() {
+  if (!confirm('Are you sure you want to unlink your Discord account from the dashboard?')) return;
+  try {
+    const res = await fetch('/api/oauth/unlink', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Discord account unlinked.', 'success');
+      setTimeout(() => window.location.reload(), 600);
+    }
+  } catch (err) {
+    showToast('Error unlinking account', 'error');
+  }
+}
+
+// Auto-open modal if redirected with ?setup_oauth=1
+document.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('setup_oauth') === '1' || urlParams.get('setup_oauth') === 'true') {
+    openOAuthModal();
+  }
+});
+</script>

@@ -946,4 +946,75 @@ router.post('/guilds/:guildId/commands-config', requireAdminAuth, canManageGuild
   }
 });
 
+// 18. Discord OAuth2 Config (Bot Client ID & Secret for Account Linking)
+router.get('/oauth/config', requireAdminAuth, async (req, res) => {
+  try {
+    const oauth = await db.oauthConfig.get();
+    const bots = await db.managedBots.list();
+    const defaultCallback = `${req.protocol}://${req.get('host')}/auth/discord/callback`;
+    return res.json({
+      success: true,
+      config: {
+        clientId: oauth.clientId,
+        hasSecret: oauth.hasSecret,
+        redirectUri: oauth.redirectUri || defaultCallback,
+        defaultRedirectUri: defaultCallback,
+        botId: oauth.botId,
+        isConfigured: oauth.isConfigured,
+        updatedAt: oauth.updatedAt
+      },
+      availableBots: bots.map(b => ({ botId: b.botId, username: b.username, tag: b.tag })),
+      isLinked: !!(req.session.discordUser && req.session.discordUser.id),
+      linkedAccount: req.session.discordUser ? {
+        id: req.session.discordUser.id,
+        username: req.session.discordUser.username,
+        global_name: req.session.discordUser.global_name,
+        avatar: req.session.discordUser.avatar
+      } : null
+    });
+  } catch (err) {
+    logger.error('Failed to get oauth config', err, 'OAUTH_API');
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/oauth/config', requireAdminAuth, async (req, res) => {
+  try {
+    const { clientId, clientSecret, redirectUri, botId } = req.body;
+    if (!clientId || !clientId.trim()) {
+      return res.status(400).json({ success: false, error: 'Client ID / Application ID is required.' });
+    }
+    const saved = await db.oauthConfig.set({
+      clientId: clientId.trim(),
+      clientSecret: clientSecret ? clientSecret.trim() : '',
+      redirectUri: redirectUri ? redirectUri.trim() : '',
+      botId: botId ? botId.trim() : ''
+    });
+    logger.success('Discord OAuth credentials updated via Dashboard', 'OAUTH_API');
+    return res.json({
+      success: true,
+      message: 'Discord OAuth credentials saved! You can now link your Discord account.',
+      config: saved
+    });
+  } catch (err) {
+    logger.error('Failed to save oauth config', err, 'OAUTH_API');
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/oauth/unlink', requireAdminAuth, async (req, res) => {
+  try {
+    delete req.session.discordUser;
+    delete req.session.guilds;
+    if (req.session.user) {
+      delete req.session.user.avatar;
+      delete req.session.user.global_name;
+      delete req.session.user.id;
+    }
+    return res.json({ success: true, message: 'Discord account unlinked successfully.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

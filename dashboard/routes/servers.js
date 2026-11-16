@@ -8,6 +8,7 @@ const router = express.Router();
 const { requireAdminAuth } = require('../middleware/auth');
 const { hasManageGuild } = require('../../shared/utils/helpers');
 const { getBotGuilds } = require('../middleware/botClient');
+const { db } = require('../../shared');
 
 router.get('/', requireAdminAuth, async (req, res) => {
   // 1. Fetch all servers where the Discord bot is currently a member
@@ -35,10 +36,20 @@ router.get('/', requireAdminAuth, async (req, res) => {
   // Sort: Active bot guilds first
   combinedGuilds.sort((a, b) => (b.botInGuild ? 1 : 0) - (a.botInGuild ? 1 : 0));
 
+  // Dynamic OAuth and Bot Client ID resolution
+  const oauth = await db.oauthConfig.get();
+  const bots = await db.managedBots.list();
+  const primaryBotId = bots[0]?.botId || '';
+  const effectiveClientId = oauth.clientId || primaryBotId || process.env.CLIENT_ID || '';
+  const isLinked = !!(req.session.discordUser && req.session.discordUser.id);
+
   res.render('servers', {
     user: req.session.user,
+    discordUser: req.session.discordUser || null,
     guilds: combinedGuilds,
-    clientId: process.env.CLIENT_ID || ''
+    clientId: effectiveClientId,
+    oauthConfig: oauth,
+    isLinked
   });
 });
 

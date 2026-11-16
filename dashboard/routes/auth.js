@@ -196,23 +196,29 @@ router.post('/logout', handleLogout);
 router.get('/logout', handleLogout);
 
 // 4. Optional: Post-Login Discord OAuth2 Linking (Accessible ONLY after passing Master Login)
-router.get('/auth/discord', requireAdminAuth, (req, res) => {
-  const clientId = process.env.CLIENT_ID;
-  const redirectUri = process.env.CALLBACK_URL || `${req.protocol}://${req.get('host')}/auth/discord/callback`;
+router.get('/auth/discord', requireAdminAuth, async (req, res) => {
+  try {
+    const oauth = await db.oauthConfig.get();
+    const clientId = oauth.clientId;
+    const redirectUri = oauth.redirectUri || process.env.CALLBACK_URL || `${req.protocol}://${req.get('host')}/auth/discord/callback`;
 
-  if (!clientId) {
-    return res.status(500).send('CLIENT_ID is not configured in .env');
+    if (!clientId || !oauth.hasSecret) {
+      return res.redirect('/dashboard?setup_oauth=1&notice=' + encodeURIComponent('Please configure your Bot Client ID & Client Secret in Discord OAuth Settings to link your account.'));
+    }
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'identify guilds',
+      prompt: 'consent'
+    });
+
+    return res.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
+  } catch (err) {
+    logger.error('Error starting Discord OAuth flow', err, 'AUTH');
+    return res.redirect('/dashboard?error=' + encodeURIComponent('Failed to initiate Discord OAuth flow.'));
   }
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'identify guilds',
-    prompt: 'consent'
-  });
-
-  return res.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
 });
 
 router.get('/auth/discord/callback', requireAdminAuth, async (req, res) => {
@@ -221,11 +227,16 @@ router.get('/auth/discord/callback', requireAdminAuth, async (req, res) => {
     return res.redirect('/dashboard?error=no_code');
   }
 
-  const clientId = process.env.CLIENT_ID;
-  const clientSecret = process.env.CLIENT_SECRET;
-  const redirectUri = process.env.CALLBACK_URL || `${req.protocol}://${req.get('host')}/auth/discord/callback`;
-
   try {
+    const oauth = await db.oauthConfig.get();
+    const clientId = oauth.clientId;
+    const clientSecret = oauth.clientSecret;
+    const redirectUri = oauth.redirectUri || process.env.CALLBACK_URL || `${req.protocol}://${req.get('host')}/auth/discord/callback`;
+
+    if (!clientId || !clientSecret) {
+      return res.redirect('/dashboard?setup_oauth=1&error=' + encodeURIComponent('Discord OAuth credentials not found. Please configure them in Settings.'));
+    }
+
     const tokenResponse = await fetch(`${DISCORD_API_ENDPOINT}/oauth2/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -240,7 +251,9 @@ router.get('/auth/discord/callback', requireAdminAuth, async (req, res) => {
 
     const tokenData = await tokenResponse.json();
     if (!tokenResponse.ok || !tokenData.access_token) {
-      return res.redirect('/dashboard?error=token_failed');
+      const errMsg = tokenData.error_description || tokenData.error || 'Failed to exchange authorization code';
+      logger.error('OAuth token exchange failed', tokenData, 'AUTH');
+      return res.redirect('/dashboard?setup_oauth=1&error=' + encodeURIComponent(`OAuth Token Error: ${errMsg}`));
     }
 
     // Fetch User Profile & Guilds
@@ -264,11 +277,25 @@ router.get('/auth/discord/callback', requireAdminAuth, async (req, res) => {
       avatar: discordUser.avatar
     };
 
-    return res.redirect('/dashboard?notice=Discord+account+linked+successfully');
+    logger.success(`Linked Discord user @${discordUser.username} (${discordUser.id}) to admin session`, 'AUTH');
+    return res.redirect('/dashboard?notice=' + encodeURIComponent(`Discord account @${discordUser.username} linked successfully!`));
   } catch (err) {
     logger.error('Error during Discord account linking callback', err, 'AUTH');
     return res.redirect('/dashboard?error=discord_link_failed');
   }
+});
+
+router.post('/auth/discord/unlink', requireAdminAuth, (req, res) => {
+  const oldUsername = req.session.discordUser?.username || 'Discord user';
+  delete req.session.discordUser;
+  delete req.session.guilds;
+  if (req.session.user) {
+    delete req.session.user.avatar;
+    delete req.session.user.global_name;
+    delete req.session.user.id;
+  }
+  logger.info(`Unlinked Discord user ${oldUsername} from admin session`, 'AUTH');
+  return res.redirect('/dashboard?notice=' + encodeURIComponent('Discord account unlinked from dashboard.'));
 });
 
 module.exports = router;

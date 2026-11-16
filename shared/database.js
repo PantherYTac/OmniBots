@@ -49,7 +49,8 @@ let memoryStore = {
   ticketPanels: {},
   ticketCategories: {},
   applicationForms: {},
-  applicationSubmissions: []
+  applicationSubmissions: [],
+  oauthConfig: null
 };
 
 // Ensure data directory exists
@@ -2040,6 +2041,100 @@ const db = {
       return (memoryStore.modCases || [])
         .filter(c => c.guildId === guildId)
         .slice(0, limit);
+    }
+  },
+
+  // 22. Discord OAuth2 Config (Account Linking)
+  oauthConfig: {
+    async get() {
+      let data = null;
+      if (dbDriver === 'postgres' && pgPool) {
+        const res = await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'oauthConfig' AND doc_id = 'global'");
+        if (res.rows.length > 0) data = res.rows[0].data;
+      } else {
+        data = memoryStore.oauthConfig || null;
+      }
+
+      const storedClientId = data?.clientId || '';
+      const storedSecretEncrypted = data?.clientSecret || '';
+      let decryptedSecret = '';
+      if (storedSecretEncrypted) {
+        try {
+          const { decrypt } = require('./config');
+          decryptedSecret = decrypt(storedSecretEncrypted) || '';
+        } catch (e) {
+          decryptedSecret = '';
+        }
+      }
+
+      // Check env fallbacks
+      const clientId = storedClientId || process.env.CLIENT_ID || '';
+      const clientSecret = decryptedSecret || process.env.CLIENT_SECRET || '';
+      const redirectUri = data?.redirectUri || process.env.CALLBACK_URL || '';
+
+      return {
+        clientId,
+        clientSecret, // internal use only (token exchange)
+        hasSecret: !!clientSecret,
+        redirectUri,
+        botId: data?.botId || '',
+        isConfigured: !!(clientId && clientSecret),
+        updatedAt: data?.updatedAt || null
+      };
+    },
+
+    async set({ clientId, clientSecret, redirectUri, botId }) {
+      const current = await this.get();
+      const { encrypt } = require('./config');
+
+      let encryptedSecret = '';
+      if (clientSecret && clientSecret.trim()) {
+        encryptedSecret = encrypt(clientSecret.trim());
+      } else if (current.hasSecret && (!clientSecret || clientSecret === '••••••••')) {
+        // preserve existing secret
+        const raw = (dbDriver === 'postgres' && pgPool)
+          ? (await pgPool.query("SELECT data FROM shared_collections WHERE collection_name = 'oauthConfig' AND doc_id = 'global'")).rows[0]?.data?.clientSecret
+          : memoryStore.oauthConfig?.clientSecret;
+        encryptedSecret = raw || '';
+      }
+
+      const sanitized = {
+        clientId: (clientId || '').trim(),
+        clientSecret: encryptedSecret,
+        redirectUri: (redirectUri || '').trim(),
+        botId: (botId || '').trim(),
+        updatedAt: Date.now()
+      };
+
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query(`
+          INSERT INTO shared_collections (collection_name, doc_id, data, updated_at)
+          VALUES ('oauthConfig', 'global', $1, NOW())
+          ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $1, updated_at = NOW()
+        `, [sanitized]);
+      } else {
+        memoryStore.oauthConfig = sanitized;
+        saveLocalStore();
+      }
+
+      return {
+        clientId: sanitized.clientId,
+        hasSecret: !!sanitized.clientSecret,
+        redirectUri: sanitized.redirectUri,
+        botId: sanitized.botId,
+        isConfigured: !!(sanitized.clientId && sanitized.clientSecret),
+        updatedAt: sanitized.updatedAt
+      };
+    },
+
+    async clear() {
+      if (dbDriver === 'postgres' && pgPool) {
+        await pgPool.query("DELETE FROM shared_collections WHERE collection_name = 'oauthConfig' AND doc_id = 'global'");
+      } else {
+        memoryStore.oauthConfig = null;
+        saveLocalStore();
+      }
+      return true;
     }
   }
 };

@@ -276,8 +276,39 @@ async function runTests() {
 
   console.log('✅ Express Dashboard Server & Public Legal Routes: PASSED');
 
+  // 8. Discord OAuth2 Config (Bot Client ID & Secret Linking) & SVG Branding
+  console.log('\n[8/8] Testing Discord OAuth2 Engine & Clean SVG Assets (Logo + Favicon)...');
+  
+  // Test OAuth config save and encrypted secret retrieval
+  const testClientId = '998877665544332211';
+  const testClientSecret = 'super_secret_discord_oauth_key_12345';
+  await db.oauthConfig.set({
+    clientId: testClientId,
+    clientSecret: testClientSecret,
+    redirectUri: 'https://omnibots.app/auth/discord/callback'
+  });
+
+  const oauthCfg = await db.oauthConfig.get();
+  assert.strictEqual(oauthCfg.clientId, testClientId, 'OAuth clientId must match');
+  assert.strictEqual(oauthCfg.clientSecret, testClientSecret, 'Decrypted OAuth secret must match original');
+  assert.strictEqual(oauthCfg.hasSecret, true, 'hasSecret must be true');
+  assert.strictEqual(oauthCfg.isConfigured, true, 'isConfigured must be true');
+
+  // Test SVG Logo & Favicon Assets
+  const logoPath = path.join(__dirname, '..', 'dashboard', 'public', 'images', 'logo.svg');
+  const faviconPath = path.join(__dirname, '..', 'dashboard', 'public', 'favicon.svg');
+  assert(fs.existsSync(logoPath), 'logo.svg must exist');
+  assert(fs.existsSync(faviconPath), 'favicon.svg must exist');
+
+  const logoContent = fs.readFileSync(logoPath, 'utf8');
+  const faviconContent = fs.readFileSync(faviconPath, 'utf8');
+  assert(logoContent.includes('<svg'), 'logo.svg must be a valid SVG');
+  assert(logoContent.includes('Omni') && logoContent.includes('Bots'), 'logo.svg must contain OmniBots wordmark');
+  assert(faviconContent.includes('<svg') && faviconContent.includes('viewBox="0 0 32 32"'), 'favicon.svg must have 32x32 viewBox');
+  console.log('✅ Discord OAuth2 Engine & Clean SVG Assets: PASSED');
+
   console.log('\n========================================');
-  console.log('🎉 ALL 7 TEST SUITES PASSED FLAWLESSLY!');
+  console.log('🎉 ALL 8 TEST SUITES PASSED FLAWLESSLY!');
   console.log('========================================');
 }
 
