@@ -19,9 +19,15 @@ let dbDriver = 'local'; // 'mongodb' | 'postgres' | 'local'
 let pgPool = null;
 let mongooseClient = null;
 
-// Local file store path
-const dataDir = path.join(__dirname, 'data');
+// Multi-path persistence resolution (supports DATA_DIR env, shared/data, and root /data)
+const rootDir = path.resolve(__dirname, '..');
+const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
 const localStorePath = path.join(dataDir, 'store.json');
+const backupStorePath = path.join(dataDir, 'store.backup.json');
+const rootDataDir = path.join(rootDir, 'data');
+const fallbackStorePath = path.join(rootDataDir, 'store.json');
+const seedStorePath = path.join(rootDir, 'store.seed.json');
+const altSeedStorePath = path.join(dataDir, 'store.seed.json');
 
 // In-memory cache for local JSON store
 let memoryStore = {
@@ -53,29 +59,67 @@ let memoryStore = {
   oauthConfig: null
 };
 
-// Ensure data directory exists
+// Ensure data directories exist
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
+if (!fs.existsSync(rootDataDir)) {
+  try { fs.mkdirSync(rootDataDir, { recursive: true }); } catch {}
+}
 
-// Load existing local data if present
-if (fs.existsSync(localStorePath)) {
-  try {
-    const raw = fs.readFileSync(localStorePath, 'utf8');
-    memoryStore = { ...memoryStore, ...JSON.parse(raw) };
-  } catch (err) {
-    logger.warn('Could not parse local store.json, starting with fresh store.', 'DATABASE');
+// Resilient load sequence: store.json -> fallback data/store.json -> store.backup.json -> store.seed.json
+let loadedFromDisk = false;
+const storeCandidates = [
+  localStorePath,
+  fallbackStorePath,
+  backupStorePath,
+  altSeedStorePath,
+  seedStorePath
+];
+
+for (const candidate of storeCandidates) {
+  if (fs.existsSync(candidate)) {
+    try {
+      const raw = fs.readFileSync(candidate, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        memoryStore = { ...memoryStore, ...parsed };
+        loadedFromDisk = true;
+        logger.info(`Loaded persistent database from: ${candidate}`, 'DATABASE');
+        break;
+      }
+    } catch (err) {
+      logger.warn(`Could not parse ${candidate}: ${err.message}`, 'DATABASE');
+    }
   }
 }
 
+if (!loadedFromDisk) {
+  logger.info('Initialized fresh database store.', 'DATABASE');
+}
+
 /**
- * Persist memory store to disk atomically
+ * Persist memory store to disk atomically with redundant backup copy
  */
 function saveLocalStore() {
   try {
+    const serialized = JSON.stringify(memoryStore, null, 2);
+    // 1. Atomic write to primary store.json
     const tempPath = `${localStorePath}.tmp`;
-    fs.writeFileSync(tempPath, JSON.stringify(memoryStore, null, 2), 'utf8');
+    fs.writeFileSync(tempPath, serialized, 'utf8');
     fs.renameSync(tempPath, localStorePath);
+
+    // 2. Rolling backup copy in dataDir
+    try {
+      fs.writeFileSync(backupStorePath, serialized, 'utf8');
+    } catch {}
+
+    // 3. Mirror write to root /data if different directory
+    if (fallbackStorePath !== localStorePath) {
+      try {
+        fs.writeFileSync(fallbackStorePath, serialized, 'utf8');
+      } catch {}
+    }
   } catch (err) {
     logger.error('Failed to write local store.json', err, 'DATABASE');
   }
@@ -2135,6 +2179,35 @@ const db = {
         saveLocalStore();
       }
       return true;
+    }
+  },
+
+  // 23. Database Backup & Migration Utility
+  backup: {
+    async exportData() {
+      return {
+        version: '2.0.0',
+        exportedAt: new Date().toISOString(),
+        timestamp: Date.now(),
+        data: { ...memoryStore }
+      };
+    },
+
+    async importData(imported) {
+      if (!imported || typeof imported !== 'object') {
+        throw new Error('Invalid backup payload: expected an object.');
+      }
+      const payload = imported.data && typeof imported.data === 'object' ? imported.data : imported;
+
+      // Preserve critical collections while updating
+      for (const [key, value] of Object.entries(payload)) {
+        if (value !== undefined) {
+          memoryStore[key] = value;
+        }
+      }
+      saveLocalStore();
+      logger.success('Database backup restored successfully', 'DATABASE');
+      return { success: true, count: Object.keys(payload).length };
     }
   }
 };

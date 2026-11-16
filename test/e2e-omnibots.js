@@ -307,8 +307,33 @@ async function runTests() {
   assert(faviconContent.includes('<svg') && faviconContent.includes('viewBox="0 0 32 32"'), 'favicon.svg must have 32x32 viewBox');
   console.log('✅ Discord OAuth2 Engine & Clean SVG Assets: PASSED');
 
+  // 9. BigInt Serialization, Database Backup/Restore & Release Packaging
+  console.log('\n[9/9] Testing BigInt JSON Safety, DB Backup/Restore & Distribution Archives...');
+  
+  // Test BigInt serialization
+  const bigIntObj = { id: 1234567890123456789n, permissions: 8n };
+  const bigIntJson = JSON.stringify(bigIntObj);
+  assert(bigIntJson.includes('"1234567890123456789"'), 'BigInt must serialize to string without throwing');
+
+  // Test Database Backup Export & Import
+  const exportedBackup = await db.backup.exportData();
+  assert(exportedBackup.data && typeof exportedBackup.data === 'object', 'Export must contain data object');
+  assert.strictEqual(exportedBackup.version, '2.0.0');
+
+  const importResult = await db.backup.importData(exportedBackup);
+  assert.strictEqual(importResult.success, true, 'Import must report success');
+
+  // Test Distribution Archives
+  const zipDistPath = path.join(__dirname, '..', 'omnibots.zip');
+  const tarDistPath = path.join(__dirname, '..', 'omnibots.tar.gz');
+  assert(fs.existsSync(zipDistPath), 'omnibots.zip must exist');
+  assert(fs.existsSync(tarDistPath), 'omnibots.tar.gz must exist');
+  assert(fs.statSync(zipDistPath).size > 10000, 'omnibots.zip must have content');
+  assert(fs.statSync(tarDistPath).size > 10000, 'omnibots.tar.gz must have content');
+  console.log('✅ BigInt Safety, DB Backup/Restore & Distribution Archives: PASSED');
+
   console.log('\n========================================');
-  console.log('🎉 ALL 8 TEST SUITES PASSED FLAWLESSLY!');
+  console.log('🎉 ALL 9 TEST SUITES PASSED FLAWLESSLY!');
   console.log('========================================');
 }
 

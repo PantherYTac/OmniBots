@@ -1,0 +1,489 @@
+{
+  "guildSettings": {},
+  "infractions": [
+    {
+      "0": "g",
+      "1": "u",
+      "2": "i",
+      "3": "l",
+      "4": "d",
+      "5": "_",
+      "6": "c",
+      "7": "o",
+      "8": "m",
+      "9": "p",
+      "10": "l",
+      "11": "i",
+      "12": "a",
+      "13": "n",
+      "14": "c",
+      "15": "e",
+      "16": "_",
+      "17": "t",
+      "18": "e",
+      "19": "s",
+      "20": "t",
+      "21": "_",
+      "22": "8",
+      "23": "8",
+      "24": "8",
+      "id": "inf_1794749491325_c2sy2",
+      "timestamp": 1794749491325
+    }
+  ],
+  "stickyRoles": {},
+  "userLevels": {},
+  "economy": {},
+  "shopItems": [],
+  "tickets": [
+    {
+      "id": "ticket-general-1",
+      "ticketId": "ticket-general-1",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "categoryId": "cat_general",
+      "channelId": "ch_ticket_1",
+      "openerId": "user_123",
+      "openerTag": "Unknown#0000",
+      "userId": "user_123",
+      "userName": "Unknown#0000",
+      "claimedBy": null,
+      "claimedByTag": null,
+      "status": "closed",
+      "answersJson": "{\"q_issue\":\"My test problem\"}",
+      "htmlTranscript": null,
+      "transcriptHtml": null,
+      "locked": false,
+      "closeReason": "Resolved by admin",
+      "closedBy": "admin_1",
+      "closedByTag": null,
+      "createdAt": 1794813878658,
+      "closedAt": null
+    },
+    {
+      "id": "ticket-general-1",
+      "ticketId": "ticket-general-1",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "categoryId": "cat_general",
+      "channelId": "ch_ticket_1",
+      "openerId": "user_123",
+      "openerTag": "Unknown#0000",
+      "userId": "user_123",
+      "userName": "Unknown#0000",
+      "claimedBy": null,
+      "claimedByTag": null,
+      "status": "open",
+      "answersJson": "{\"q_issue\":\"My test problem\"}",
+      "htmlTranscript": null,
+      "transcriptHtml": null,
+      "locked": false,
+      "closeReason": null,
+      "closedBy": null,
+      "closedByTag": null,
+      "createdAt": 1794813897271,
+      "closedAt": null
+    },
+    {
+      "id": "ticket-general-1",
+      "ticketId": "ticket-general-1",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "categoryId": "cat_general",
+      "channelId": "ch_ticket_1",
+      "openerId": "user_123",
+      "openerTag": "Unknown#0000",
+      "userId": "user_123",
+      "userName": "Unknown#0000",
+      "claimedBy": null,
+      "claimedByTag": null,
+      "status": "open",
+      "answersJson": "{\"q_issue\":\"My test problem\"}",
+      "htmlTranscript": null,
+      "transcriptHtml": null,
+      "locked": false,
+      "closeReason": null,
+      "closedBy": null,
+      "closedByTag": null,
+      "createdAt": 1794841359616,
+      "closedAt": null
+    },
+    {
+      "id": "ticket-general-1",
+      "ticketId": "ticket-general-1",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "categoryId": "cat_general",
+      "channelId": "ch_ticket_1",
+      "openerId": "user_123",
+      "openerTag": "Unknown#0000",
+      "userId": "user_123",
+      "userName": "Unknown#0000",
+      "claimedBy": null,
+      "claimedByTag": null,
+      "status": "open",
+      "answersJson": "{\"q_issue\":\"My test problem\"}",
+      "htmlTranscript": null,
+      "transcriptHtml": null,
+      "locked": false,
+      "closeReason": null,
+      "closedBy": null,
+      "closedByTag": null,
+      "createdAt": 1794841791597,
+      "closedAt": null
+    }
+  ],
+  "customCommands": [],
+  "suggestions": [],
+  "giveaways": [],
+  "starboard": {},
+  "auditLogs": [],
+  "sessions": {
+    "r4kiH2Iyc5xqPHlFutqTJgTqsworgRo6": {
+      "sid": "r4kiH2Iyc5xqPHlFutqTJgTqsworgRo6",
+      "data": {
+        "cookie": {
+          "originalMaxAge": 604800000,
+          "expires": "2026-11-23T07:23:45.297Z",
+          "secure": "auto",
+          "httpOnly": true,
+          "path": "/",
+          "sameSite": "lax"
+        }
+      },
+      "expires": "2026-11-23T07:23:45.297Z",
+      "updatedAt": 1794813825297
+    },
+    "qaPNt8nuFlRlGtkZ7e12M8TI0B0gG7BW": {
+      "sid": "qaPNt8nuFlRlGtkZ7e12M8TI0B0gG7BW",
+      "data": {
+        "cookie": {
+          "originalMaxAge": 604800000,
+          "expires": "2026-11-23T07:23:45.300Z",
+          "secure": "auto",
+          "httpOnly": true,
+          "path": "/",
+          "sameSite": "lax"
+        }
+      },
+      "expires": "2026-11-23T07:23:45.300Z",
+      "updatedAt": 1794813825300
+    }
+  },
+  "botSettings": {
+    "status": "online",
+    "rotationEnabled": false,
+    "rotationIntervalSeconds": 30,
+    "activities": [
+      {
+        "type": "CUSTOM",
+        "text": "⚡ Protecting {servers} servers with {users} users",
+        "url": ""
+      }
+    ],
+    "updatedAt": 1794733644807
+  },
+  "invites": {},
+  "inviteMembers": {},
+  "legalDocuments": {
+    "privacyPolicy": {
+      "content": "# Privacy Policy for OmniBots\n\n**Effective Date:** January 1, 2025  \n**Last Updated:** November 15, 2026  \n\nWelcome to **OmniBots** (\"we,\" \"our,\" or \"us\"). We are committed to protecting your privacy and handling your data with transparency, integrity, and strict adherence to the **Discord Developer Terms of Service**, the **Discord Developer Policy**, and international data protection regulations (including GDPR and CCPA).\n\nThis Privacy Policy explains what information we collect, how it is used, how it is stored and protected, and your rights to access or permanently delete your data.\n\n---\n\n## 1. Information and Data We Collect\n\nTo provide server management, automated moderation, community leveling, economy games, ticket support, and interactive AI utilities, we collect and process specific Discord data:\n\n### A. Discord Identifiers (Stored)\n* **Discord User IDs & Usernames:** To identify users for leveling XP, economy balances, infractions, birthdays, reminders, and user-specific configuration.\n* **Discord Guild (Server) IDs & Names:** To store server-specific settings, prefixes, auto-mod rules, ticket configurations, and logging channels.\n* **Discord Channel & Role IDs:** To direct log messages, manage ticket categories, autoroles, and level-up rewards.\n\n### B. Server Progression & Activity Metrics (Stored)\n* **Leveling & Experience:** Message count estimates and text/voice XP earned within each server.\n* **Server Economy & Virtual Inventory:** Virtual wallet balances, bank balances, daily streaks, and purchased role items.\n* **Invite Tracking & Attribution:** Counts of regular joins, bonus invites awarded by administrators, member leaves, and anti-fake join flags (< 7 days account age).\n* **Support Ticket Transcripts:** Ticket channel metadata and exported static HTML conversation transcripts (generated and saved only when explicitly requested by server staff).\n* **Community Birthdays & Reminders:** User-provided birth dates (month/day) and scheduled reminder timestamps.\n\n### C. Moderation & Audit Logs (Stored)\n* **Infraction Records:** Warning counts, reason strings, moderator IDs, and active auto-escalation actions (timeouts, kicks, bans) issued within a specific guild.\n\n### D. Temporary Message Content (Ephemeral Processing Only)\n* **Auto-Moderation Filter:** In-transit message text is scanned in real-time RAM to detect prohibited links, banned keywords, Discord invite links, mass mentions, and excessive emojis. **Message contents are never stored in a permanent database for auto-moderation.**\n* **Audit Logging:** If enabled by guild administrators, message edit diffs (before/after) and message deletions are formatted into an embed and delivered strictly to the guild's designated audit log channel.\n* **AI Utilities (`/ask` Command):** Text prompts submitted to the `/ask` command are processed ephemerally to generate AI responses.\n\n---\n\n## 2. Privileged Discord Gateway Intents & Justifications\n\nOur bot operates under explicit, privileged Discord Gateway Intents approved by Discord Inc.:\n\n1. **`MESSAGE_CONTENT`:** Required strictly to inspect message content for real-time automated moderation (filtering scams, malicious URLs, and toxic keywords), execute legacy prefix commands, and process `/ask` AI inquiries.\n2. **`GUILD_MEMBERS`:** Required to assign automatic roles upon join, restore sticky roles when members rejoin, deliver custom welcomer/farewell cards, track voice channel activity for voice XP, and maintain server statistics.\n3. **`GUILD_INVITES`:** Required to detect and attribute member invitations, filter suspicious alt accounts, compute referral leaderboards, and award milestone invite roles.\n\n---\n\n## 3. Third-Party Sub-Processors & Data Sharing\n\nWe do **not** sell, rent, monetize, or trade your personal information. We engage only with reputable cloud infrastructure providers necessary to operate our service:\n\n* **Hostinger International Ltd.:** High-performance cloud application hosting provider where our Node.js runtime environment and web dashboard execute.\n* **Database Infrastructure (MongoDB / PostgreSQL / Encrypted Storage):** Secure, access-controlled databases used to persist guild configurations, user balances, and moderation logs. Data is encrypted in transit (TLS 1.3) and at rest (AES-256).\n* **Google Gemini API (@google/genai):** Used solely for processing text queries submitted directly to the `/ask` slash command.  \n  > **Important AI Safety Guarantee:** User queries processed via the Google Gemini API are strictly handled for inference and **are NOT used to train Google's AI models** or stored beyond the immediate API response window.\n\n---\n\n## 4. Zero Data Selling Guarantee\n\nWe explicitly state:\n* We **NEVER** sell, license, rent, or distribute Discord API data or user information to third-party data brokers, advertisers, marketing firms, or analytics companies.\n* We **NEVER** build behavioral advertising profiles based on your Discord messages or server interactions.\n* Data collected is used exclusively to deliver the functionality requested by server members and administrators.\n\n---\n\n## 5. Data Retention & Automatic Cleanup\n\n* **Active Usage:** Server data remains active as long as the bot resides in the guild and the service is actively utilized.\n* **Server Departure:** If our bot is removed or kicked from a Discord server, the server's configuration and associated data are retained for a 30-day grace period (to prevent accidental data loss during re-invites), after which they are permanently purged.\n* **Audit Logs:** Audit logs and moderation infraction history older than 90 days are automatically archived or purged.\n\n---\n\n## 6. User Rights & Immediate Self-Service Deletion (`/delete-my-data`)\n\nYou retain absolute ownership and control over your personal data:\n\n1. **Instant Self-Service Deletion:** Any user may run the `/delete-my-data` slash command in any server where the bot is present. Upon interactive confirmation, all personal leveling XP, economy balances, inventory items, birthday records, scheduled reminders, and invite statistics associated with your User ID will be **immediately and permanently erased** from our database.\n2. **Right to Know / Access:** You may view your stored data at any time using commands like `/rank`, `/balance`, `/invites`, and `/warnings`.\n3. **Manual Deletion Request:** You may email our Data Protection representative at **support@yourdomain.com** or contact us on our Discord Support Server to request a comprehensive manual review or purge of any records associated with your Discord account.\n\n---\n\n## 7. Security Safeguards\n\nWe implement industry-standard security measures including:\n* Constant-time cryptographic verification (bcrypt SALT_ROUNDS = 12) for dashboard access.\n* TLS/HTTPS encryption for all web dashboard sessions with HTTP-only, secure, SameSite cookies.\n* Strict input validation, brute-force rate limiters, and session fixation defenses.\n* Least-privilege API token handling and environment variable isolation.\n\n---\n\n## 8. Updates to this Policy\n\nWe may update this Privacy Policy from time to time to reflect changes in our features, Discord API policies, or applicable laws. Changes take effect immediately upon publication on this page. The \"Last Updated\" timestamp at the top indicates the latest revision.\n\n---\n\n## 9. Contact Information\n\nIf you have questions, concerns, or inquiries regarding this Privacy Policy or our data practices, please contact us:\n\n* **Official Contact Email:** [support@yourdomain.com](mailto:support@yourdomain.com)\n* **Discord Community Support Server:** [https://discord.gg/yourserver](https://discord.gg/yourserver)\n",
+      "updatedAt": "2026-11-15T13:31:57.847Z"
+    },
+    "termsOfService": {
+      "content": "# Terms of Service for OmniBots\n\n**Effective Date:** January 1, 2025  \n**Last Updated:** November 15, 2026  \n\nPlease read these Terms of Service (\"Terms\") carefully before adding **OmniBots** (\"the Bot\") to your Discord server or utilizing its associated Web Dashboard and slash commands.\n\nBy inviting the Bot, accessing the dashboard, or interacting with any Bot features, you agree to be bound by these Terms and our [Privacy Policy](/privacy). If you do not agree to these Terms, you must immediately remove the Bot from your server and discontinue all use.\n\n---\n\n## 1. Eligibility & Age Requirements\n\n* **Minimum Age:** You must be at least **13 years of age** (or the minimum legal age required in your country of residence to use online services) to use the Bot, in strict accordance with [Discord's Terms of Service](https://discord.com/terms).\n* **Authority:** If you add the Bot to a Discord server, you represent and warrant that you possess the necessary administrative permissions (e.g., `Manage Server` or `Administrator`) to bind that server to these Terms.\n\n---\n\n## 2. Permitted Use & Service Description\n\nThe Bot provides server management tools, automated moderation, leveling and rank cards, economy minigames, reaction roles, support ticket management, and artificial intelligence utilities. You are granted a limited, revocable, non-exclusive, non-transferable license to use the Bot for non-commercial server administration and community engagement.\n\n---\n\n## 3. Prohibited Conduct\n\nYou agree that you will **NOT** under any circumstances:\n\n1. **Exploit or Abuse Systems:** Use bugs, macros, auto-clickers, self-bots, or automated scripts to manipulate leveling XP, economy coins, leaderboard standings, or minigames.\n2. **Harmful or Illegal Content:** Use the Bot's embed builders, custom commands, welcomer messages, or `/ask` AI interface to create, store, or transmit content that is illegal, defamatory, hateful, abusive, threatening, infringing on intellectual property, or containing malware/phishing links.\n3. **Disrupt Service:** Attempt to flood, DDoS, reverse engineer, decompile, or bypass rate limits, authentication gates, or access controls of the Bot or its Web Dashboard.\n4. **Violate Discord Policies:** Use the Bot in any manner that violates [Discord's Community Guidelines](https://discord.com/guidelines) or [Discord's Developer Terms of Service](https://discord.com/developers/docs/policies-and-agreements/developer-terms-of-service).\n\n---\n\n## 4. Virtual Currency & Economy Disclaimer\n\n* **Zero Monetary Value:** All virtual currency (such as Coins), experience points (XP), levels, badges, and server shop items generated or managed by the Bot are purely digital amusement mechanics.\n* **No Real-World Value:** Virtual items and currencies have **ZERO real-world monetary value**, cannot be exchanged for fiat currency, cryptocurrencies, or tangible goods/services, and cannot be transferred outside of the specific Discord server where they were awarded.\n* **Reset Rights:** Server administrators and Bot operators reserve the unrestricted right to modify, adjust, deduct, or reset economy balances, XP levels, and inventory items at any time without prior notice or liability.\n\n---\n\n## 5. Support Tickets & Server Staff Responsibility\n\n* The Bot provides tools for server administrators to configure private support ticket channels and export HTML transcripts.\n* The content of tickets, transcripts, and member interactions is solely the responsibility of the respective server administrators and ticket participants.\n* Bot operators do not monitor private ticket channels unless requested to do so for technical support or security auditing.\n\n---\n\n## 6. Service Availability & \"As-Is\" Disclaimer\n\n* **Availability:** The Bot and Web Dashboard are provided on an **\"AS IS\"** and **\"AS AVAILABLE\"** basis. While we strive for 99.9% uptime on Hostinger infrastructure, we do not guarantee uninterrupted, error-free, or continuous service.\n* **Modifications:** We reserve the right to alter, update, deprecate, or suspend any feature, command, or module of the Bot at our discretion with or without notice.\n\n---\n\n## 7. Limitation of Liability\n\nTo the maximum extent permitted by applicable law, the Bot developers, contributors, and hosting operators shall not be held liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of data, loss of server progress, unauthorized server access, or service interruptions resulting from:\n1. The use of or inability to use the Bot.\n2. Actions, moderation decisions, or infractions executed by server administrators utilizing Bot tools.\n3. Any unauthorized access to or alteration of your transmissions or data.\n\n---\n\n## 8. Termination & Access Revocation\n\nWe reserve the right, without prior notice or liability, to suspend, terminate, or blacklist any user, Discord account, or Discord server from accessing the Bot or Web Dashboard if we determine, in our sole discretion, that these Terms, Discord's Community Guidelines, or applicable laws have been violated.\n\nUsers may terminate their agreement at any time by kicking or banning the Bot from their server and executing the `/delete-my-data` command to purge their user records.\n\n---\n\n## 9. Contact & Support\n\nFor inquiries, support questions, or notices regarding these Terms of Service, please contact:\n\n* **Official Contact Email:** [support@yourdomain.com](mailto:support@yourdomain.com)\n* **Discord Community Support Server:** [https://discord.gg/yourserver](https://discord.gg/yourserver)\n",
+      "updatedAt": "2026-11-15T13:31:57.847Z"
+    },
+    "contactEmail": "support@yourdomain.com",
+    "supportServerInvite": "https://discord.gg/yourserver",
+    "updatedAt": "2026-11-15T13:31:57.847Z"
+  },
+  "adminUsers": {
+    "testadmin_qb6hm": {
+      "username": "testadmin_qb6hm",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794757279910,
+      "lastLogin": null
+    },
+    "testadmin_9tufy": {
+      "username": "testadmin_9tufy",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794757290238,
+      "lastLogin": null
+    },
+    "testadmin_bunjp": {
+      "username": "testadmin_bunjp",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794757304882,
+      "lastLogin": null
+    },
+    "testadmin_rxfua": {
+      "username": "testadmin_rxfua",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794757326676,
+      "lastLogin": null
+    },
+    "testadmin_k9gkg": {
+      "username": "testadmin_k9gkg",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794757470977,
+      "lastLogin": null
+    },
+    "testadmin_523en": {
+      "username": "testadmin_523en",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794759278595,
+      "lastLogin": null
+    },
+    "testadmin_b9m0p": {
+      "username": "testadmin_b9m0p",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794761473106,
+      "lastLogin": null
+    },
+    "testadmin_e7z7k": {
+      "username": "testadmin_e7z7k",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794813804269,
+      "lastLogin": null
+    },
+    "testadmin_pbb6j": {
+      "username": "testadmin_pbb6j",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794813861177,
+      "lastLogin": null
+    },
+    "testadmin_1zsiq": {
+      "username": "testadmin_1zsiq",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794813878654,
+      "lastLogin": null
+    },
+    "testadmin_encjj": {
+      "username": "testadmin_encjj",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794813897267,
+      "lastLogin": null
+    },
+    "testadmin_0fygs": {
+      "username": "testadmin_0fygs",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794841359611,
+      "lastLogin": null
+    },
+    "testadmin_b2sca": {
+      "username": "testadmin_b2sca",
+      "passwordHash": "$2a$12$e8s3YxM1e4xV7H8p1B.5AOV9h8X3o1n3e9K1s8a7h4u1p2e3r4t5",
+      "createdAt": 1794841791592,
+      "lastLogin": null
+    }
+  },
+  "managedBots": {},
+  "commandsConfig": {
+    "123456789012345678": {
+      "guildId": "123456789012345678",
+      "prefix": "?",
+      "secondaryPrefixes": [
+        "!",
+        "."
+      ],
+      "allowMentionPrefix": true,
+      "commands": {},
+      "modules": {
+        "moderation": true,
+        "economy": false
+      },
+      "updatedAt": 1794841791593
+    }
+  },
+  "modCases": [],
+  "ticketPanels": {
+    "panel_main": {
+      "id": "panel_main",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "channelId": "channel_tickets",
+      "messageId": null,
+      "selectorStyle": "buttons",
+      "panelEmbed": {
+        "title": "Support Center",
+        "description": "Need assistance? Open a ticket below.",
+        "color": "#5865F2"
+      },
+      "categoryIds": [
+        "cat_general"
+      ],
+      "createdAt": 1794813861180,
+      "updatedAt": 1794841791597
+    }
+  },
+  "ticketCategories": {
+    "cat_general": {
+      "id": "cat_general",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "name": "General Support",
+      "emoji": "🎫",
+      "description": "Need help with something?",
+      "buttonColor": "Primary",
+      "discordCategoryId": "",
+      "closedCategoryId": "",
+      "channelNamePattern": "ticket-{category}-{username}-{count}",
+      "supportRoleIds": [],
+      "modalQuestions": [
+        {
+          "id": "q_issue",
+          "label": "What is your issue?",
+          "style": "Paragraph",
+          "required": true
+        }
+      ],
+      "welcomeEmbed": {
+        "title": "🎫 Support Ticket Opened",
+        "description": "Hello {user}! Thank you for reaching out. Support will be with you shortly.",
+        "color": "#5865F2"
+      },
+      "maxOpenPerUser": 1,
+      "autoCloseInactiveHours": 0,
+      "createdAt": 1794813861180,
+      "updatedAt": 1794841791596
+    }
+  },
+  "applicationForms": {
+    "form_mod": {
+      "id": "form_mod",
+      "formId": "form_mod",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "name": "Moderator Application",
+      "description": "Join our moderation staff",
+      "isOpen": true,
+      "panelEmbed": {
+        "title": "🛡️ Server Staff Applications",
+        "description": "Click below to submit an application.",
+        "color": "#5865F2",
+        "buttonText": "Apply Now"
+      },
+      "panelChannelId": "",
+      "panelMessageId": null,
+      "reviewChannelId": "",
+      "questions": [
+        {
+          "prompt": "Why do you want to join?",
+          "type": "paragraph"
+        }
+      ],
+      "requiredRoleIds": [],
+      "blockedRoleIds": [],
+      "minAccountAgeDays": 0,
+      "minServerDays": 0,
+      "reapplyCooldownHours": 24,
+      "acceptRoleIds": [],
+      "removeRoleIds": [],
+      "acceptDmEmbed": {
+        "title": "Application Accepted",
+        "description": "Your application has been accepted!",
+        "color": "#57F287"
+      },
+      "denyDmEmbed": {
+        "title": "Application Denied",
+        "description": "Thank you for applying. Unfortunately your application was not accepted at this time.",
+        "color": "#ED4245"
+      },
+      "createdAt": 1794813878659,
+      "updatedAt": 1794841791598
+    }
+  },
+  "applicationSubmissions": [
+    {
+      "id": "sub_1794841791598",
+      "submissionId": "sub_1794841791598",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "formId": "form_mod",
+      "applicantTag": "Unknown#0000",
+      "applicantAvatar": "",
+      "answersJson": [],
+      "status": "accepted",
+      "upvotes": [],
+      "downvotes": [],
+      "reviewedBy": "reviewer_1",
+      "reviewedByTag": null,
+      "reviewNote": "Great answers!",
+      "interviewThreadId": null,
+      "reviewMessageId": null,
+      "createdAt": 1794841791598,
+      "reviewedAt": null,
+      "updatedAt": 1794841791599
+    },
+    {
+      "id": "sub_1794841359617",
+      "submissionId": "sub_1794841359617",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "formId": "form_mod",
+      "applicantTag": "Unknown#0000",
+      "applicantAvatar": "",
+      "answersJson": [],
+      "status": "accepted",
+      "upvotes": [],
+      "downvotes": [],
+      "reviewedBy": "reviewer_1",
+      "reviewedByTag": null,
+      "reviewNote": "Great answers!",
+      "interviewThreadId": null,
+      "reviewMessageId": null,
+      "createdAt": 1794841359617,
+      "reviewedAt": null,
+      "updatedAt": 1794841359617
+    },
+    {
+      "id": "sub_1794813897272",
+      "submissionId": "sub_1794813897272",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "formId": "form_mod",
+      "applicantTag": "Unknown#0000",
+      "applicantAvatar": "",
+      "answersJson": [],
+      "status": "accepted",
+      "upvotes": [],
+      "downvotes": [],
+      "reviewedBy": "reviewer_1",
+      "reviewedByTag": null,
+      "reviewNote": "Great answers!",
+      "interviewThreadId": null,
+      "reviewMessageId": null,
+      "createdAt": 1794813897272,
+      "reviewedAt": null,
+      "updatedAt": 1794813897273
+    },
+    {
+      "id": "sub_1794813878659",
+      "submissionId": "sub_1794813878659",
+      "botId": "bot_test_123",
+      "guildId": "guild_test_456",
+      "formId": "form_mod",
+      "applicantTag": "Unknown#0000",
+      "applicantAvatar": "",
+      "answersJson": [],
+      "status": "pending",
+      "upvotes": [],
+      "downvotes": [],
+      "reviewedBy": null,
+      "reviewedByTag": null,
+      "reviewNote": "",
+      "interviewThreadId": null,
+      "reviewMessageId": null,
+      "createdAt": 1794813878659,
+      "reviewedAt": null
+    }
+  ],
+  "oauthConfig": {
+    "clientId": "998877665544332211",
+    "clientSecret": "enc_v1:87315ca06f207586ebd8b7bb:42661850189ff45736c40ac7a9a58529:6cf8ad547feeac3f860a5bc9652874acf045b3ca0f958817ede75b5d3522969272263728",
+    "redirectUri": "https://omnibots.app/auth/discord/callback",
+    "botId": "",
+    "updatedAt": 1794841792492
+  }
+}

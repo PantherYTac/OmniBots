@@ -5,12 +5,17 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 *.local
-data/
-/data/
-shared/data/
-/shared/data/
 logs/
 .nyc_output
 coverage
 dist
 temp
+*.tmp
+
+# Local runtime database files (ignored to prevent overwriting local state)
+data/config.json
+data/config.backup.json
+data/store.json
+data/store.backup.json
+shared/data/store.json
+shared/data/store.backup.json

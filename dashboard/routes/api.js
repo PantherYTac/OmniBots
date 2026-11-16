@@ -1017,4 +1017,39 @@ router.post('/oauth/unlink', requireAdminAuth, async (req, res) => {
   }
 });
 
+// 19. Database Backup & Restore API
+router.get('/database/export', requireAdminAuth, async (req, res) => {
+  try {
+    const backup = await db.backup.exportData();
+    const dateStr = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="omnibots-backup-${dateStr}.json"`);
+    return res.send(JSON.stringify(backup, null, 2));
+  } catch (err) {
+    logger.error('Failed to export database backup', err, 'BACKUP_API');
+    return res.status(500).json({ success: false, error: 'Failed to export database backup.' });
+  }
+});
+
+router.post('/database/import', requireAdminAuth, async (req, res) => {
+  try {
+    const payload = req.body;
+    if (!payload) {
+      return res.status(400).json({ success: false, error: 'No backup data provided.' });
+    }
+    await db.backup.importData(payload);
+
+    // Attempt to auto-restart bots if present
+    try {
+      await botManager.initAll();
+    } catch {}
+
+    logger.success('Database backup restored via dashboard API', 'BACKUP_API');
+    return res.json({ success: true, message: 'Database backup restored successfully! Bots and settings are reloaded.' });
+  } catch (err) {
+    logger.error('Failed to import database backup', err, 'BACKUP_API');
+    return res.status(400).json({ success: false, error: err.message || 'Failed to import database backup.' });
+  }
+});
+
 module.exports = router;

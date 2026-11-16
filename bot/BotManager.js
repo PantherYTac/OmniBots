@@ -143,19 +143,21 @@ class BotManager {
       } catch {}
 
       // Update metadata in database
-      await db.managedBots.save(botId, {
+      const botSummary = {
         id: botId,
         name: client.user.username,
         tag: client.user.tag,
-        avatar: client.user.displayAvatarURL(),
+        avatar: client.user.displayAvatarURL ? client.user.displayAvatarURL() : null,
         clientId: client.user.id,
         status: 'online',
         hasIntentError: false,
-        guildsCount: client.guilds.cache.size,
-        usersCount: client.guilds.cache.reduce((acc, g) => acc + (g.memberCount || 0), 0)
-      });
+        guildsCount: client.guilds ? client.guilds.cache.size : 0,
+        usersCount: client.guilds ? client.guilds.cache.reduce((acc, g) => acc + (g.memberCount || 0), 0) : 0
+      };
 
-      return client;
+      await db.managedBots.save(botId, botSummary);
+
+      return botSummary;
     } catch (err) {
       const errMsg = err.message || '';
       logger.error(`Failed to launch bot [${displayName}]: ${errMsg}`, null, 'BOT_MANAGER');

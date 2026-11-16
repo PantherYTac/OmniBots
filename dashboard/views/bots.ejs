@@ -20,6 +20,15 @@
 
       <div class="flex flex-wrap items-center gap-3">
         <button 
+          onclick="openBackupModal()" 
+          class="bg-[#0D1117] hover:bg-white/5 border border-white/8 hover:border-white/15 text-slate-300 hover:text-white font-semibold text-sm px-4 py-2 rounded-xl transition flex items-center gap-2"
+          title="Backup & Restore Fleet & Settings"
+        >
+          <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
+          <span>Backup &amp; Restore</span>
+        </button>
+
+        <button 
           onclick="openOAuthModal()" 
           class="bg-[#0D1117] hover:bg-white/5 border border-white/8 hover:border-white/15 text-slate-300 hover:text-white font-semibold text-sm px-4 py-2 rounded-xl transition flex items-center gap-2"
         >
@@ -464,5 +473,6 @@
     }
   </script>
   <%- include('partials/oauth-modal') %>
+  <%- include('partials/backup-modal') %>
 </body>
 </html>

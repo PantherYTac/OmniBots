@@ -85,11 +85,41 @@ Before deploying OmniBots to any host, you must register your Discord Bot Applic
 
 ## Deployment Guides
 
+### Downloadable Pre-Packaged Archives (No Git Required)
+
+For users who want to upload files directly via **Hostinger File Manager, cPanel, Plesk, or FTP** without connecting to GitHub:
+
+| Format | File | Recommended For |
+|---|---|---|
+| **ZIP Archive** | [`omnibots.zip`](./omnibots.zip) | Hostinger File Manager, cPanel, Plesk, Windows, macOS |
+| **TAR.GZ Archive** | [`omnibots.tar.gz`](./omnibots.tar.gz) | Linux VPS, SSH terminal, Docker containers |
+
+---
+
 ### Option A: Hostinger Managed Node.js Web App and VPS
 
 Hostinger provides managed Node.js web application hosting directly inside hPanel. OmniBots is specifically structured to run cleanly on Hostinger without compilation errors or environment variable prompts.
 
-#### Method 1: Hostinger Managed Node.js Web App (hPanel)
+#### Method 1: Hostinger Direct ZIP Upload (Recommended - No Git Required)
+
+1. **Download the Archive**:
+   - Download [`omnibots.zip`](./omnibots.zip) from this repository to your computer.
+
+2. **Upload & Extract via hPanel File Manager**:
+   - Log into your Hostinger Control Panel (hPanel).
+   - Go to **Websites** > **Manage** > **File Manager**.
+   - Navigate to your application root (e.g., `public_html` or your designated Node.js directory).
+   - Click **Upload** (top right) and select `omnibots.zip`.
+   - Right-click `omnibots.zip` and click **Extract**.
+
+3. **Configure Node.js Application**:
+   - In hPanel, navigate to **Advanced** > **Node.js** (or **Websites > Node.js Web App**).
+   - **Node.js Version**: Select `20.x` or `22.x` LTS.
+   - **Application Root**: Select the folder where you extracted the files.
+   - **Application Startup File**: `dashboard/server.js`.
+   - Click **Create** or **Start**. Hostinger will install packages and start the dashboard immediately!
+
+#### Method 2: Hostinger Managed Node.js Web App via Git (hPanel)
 
 1. **Access Node.js Management**:
    - Log into your Hostinger Control Panel (hPanel).
@@ -129,7 +159,7 @@ Hostinger provides managed Node.js web application hosting directly inside hPane
      - Set up a free uptime monitor (e.g., UptimeRobot, BetterStack, or Cron-Job.org) pinging your health endpoint every 5 minutes: `https://yourdomain.com/health`.
      - Or upgrade to a Hostinger VPS (detailed below) where PM2 keeps the Node.js process running continuously in memory.
 
-#### Method 2: Hostinger VPS (Ubuntu 22.04 / 24.04)
+#### Method 3: Hostinger VPS (Ubuntu 22.04 / 24.04)
 
 For high-volume Discord servers requiring 24/7 uptime without container idle sleep:
 
@@ -379,6 +409,36 @@ Once your OmniBots instance is deployed and running on any host, follow these st
 - **Dynamic Cookie Adaptation**: Uses `cookie: { secure: 'auto', sameSite: 'lax', httpOnly: true }` so administrative login sessions work seamlessly across HTTPS domains, HTTP test addresses, and custom subdomains without login redirect loops.
 - **Immediate Port Binding**: Express binds to `0.0.0.0` and `PORT` immediately upon process execution, ensuring container health checks pass without delay.
 - **Crash Protection**: Global `unhandledRejection` and `uncaughtException` guards trap Discord gateway connection timeouts and invalid token errors safely in logs without crashing the web application.
+
+---
+
+## Keeping Bot Details & Data Persistent Across Updates
+
+OmniBots includes built-in safeguards to ensure your bot tokens, tickets, and module configurations are **never lost** when updating code or redeploying:
+
+### 1. In-Dashboard 1-Click Backup & Restore
+* In the **Multi-Bot Fleet Hub**, click **Backup & Restore**.
+* Click **Download Backup File** to save an encrypted JSON snapshot (`omnibots-backup-YYYY-MM-DD.json`) of all added bots, tokens, tickets, applications, and settings.
+* After updating or moving hosts, upload your backup file in the same modal to restore your entire bot fleet in seconds.
+
+### 2. Updating via Direct ZIP Upload (Recommended for Hostinger & cPanel)
+* Download the latest [`omnibots.zip`](./omnibots.zip) from this repository.
+* In Hostinger / cPanel File Manager, upload and extract `omnibots.zip` directly over your existing installation.
+* Because runtime database files reside in `data/` and `shared/data/store.json`, extracting an update archive updates only the source code files and **leaves your existing database and bot tokens completely untouched**.
+
+### 3. Preserving Bot Details in Your Git Repository (`store.seed.json`)
+* If you deploy via Git and want your bots and settings to auto-restore on every deployment:
+  * Export your database or copy `shared/data/store.json` to `shared/data/store.seed.json`.
+  * Commit `store.seed.json` to your private GitHub repository.
+  * Whenever OmniBots boots on a fresh server or container, it automatically detects `store.seed.json` and initializes your bots and settings.
+
+### 4. Setting a Permanent Encryption Key (Optional)
+* OmniBots encrypts all bot tokens with AES-256-GCM.
+* To ensure tokens can always be decrypted across different machines or fresh container instances, you can optionally set an environment variable:
+  ```env
+  ENCRYPTION_KEY=your_64_character_hex_key_here
+  ```
+  *(Or generate one using `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).*
 
 ---
 

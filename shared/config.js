@@ -8,12 +8,13 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-// Resolve /data directory at project root
+// Resolve /data directory at project root or custom DATA_DIR
 const rootDir = path.resolve(__dirname, '..');
-const dataDir = path.join(rootDir, 'data');
+const dataDir = process.env.DATA_DIR || path.join(rootDir, 'data');
 const configFilePath = path.join(dataDir, 'config.json');
+const fallbackConfigPath = path.join(rootDir, 'shared', 'data', 'config.json');
 
-// Ensure /data directory exists
+// Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -34,12 +35,27 @@ function loadOrCreateConfig() {
     } catch {
       loaded = {};
     }
+  } else if (fs.existsSync(fallbackConfigPath)) {
+    try {
+      const raw = fs.readFileSync(fallbackConfigPath, 'utf8');
+      loaded = JSON.parse(raw);
+    } catch {
+      loaded = {};
+    }
+  }
+
+  // Environment variables always take precedence for reproducible deployments
+  if (process.env.SESSION_SECRET) {
+    loaded.SESSION_SECRET = process.env.SESSION_SECRET;
+  }
+  if (process.env.ENCRYPTION_KEY) {
+    loaded.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
   }
 
   // Generate cryptographic keys if absent
   let needsSave = false;
   if (!loaded.SESSION_SECRET) {
-    loaded.SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+    loaded.SESSION_SECRET = crypto.randomBytes(32).toString('hex');
     needsSave = true;
   }
   if (!loaded.ENCRYPTION_KEY) {
@@ -54,9 +70,11 @@ function loadOrCreateConfig() {
     needsSave = true;
   }
 
-  if (needsSave) {
+  if (needsSave || !fs.existsSync(configFilePath)) {
     try {
       fs.writeFileSync(configFilePath, JSON.stringify(loaded, null, 2), 'utf8');
+      // Keep a redundant backup copy
+      fs.writeFileSync(path.join(dataDir, 'config.backup.json'), JSON.stringify(loaded, null, 2), 'utf8');
     } catch (err) {
       console.error('[CONFIG] Warning: Could not persist /data/config.json:', err.message);
     }

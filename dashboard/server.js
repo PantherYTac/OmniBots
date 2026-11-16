@@ -4,6 +4,15 @@
  */
 
 require('dotenv').config();
+
+// Global BigInt JSON serialization polyfill
+// Prevents "Do not know how to serialize a BigInt" on Discord bitfields, intents, and permissions
+if (typeof BigInt !== 'undefined' && !BigInt.prototype.toJSON) {
+  BigInt.prototype.toJSON = function () {
+    return this.toString();
+  };
+}
+
 const path = require('path');
 const express = require('express');
 const session = require('express-session');

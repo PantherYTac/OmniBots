@@ -11,6 +11,7 @@
     "start:all": "node index.js",
     "deploy:commands": "node bot/deploy-commands.js",
     "generate-hash": "node scripts/generate-hash.js",
+    "package": "node scripts/package.js",
     "dev": "nodemon dashboard/server.js",
     "dev:all": "nodemon index.js",
     "dev:dashboard": "nodemon dashboard/server.js",
